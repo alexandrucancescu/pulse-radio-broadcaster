@@ -1,0 +1,10 @@
+.idea
+.DS_Store
+
+dist
+node_modules
+
+src/test.ts
+
+config/*
+!config/default.json5

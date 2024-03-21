@@ -1,0 +1,44 @@
+{
+	/*
+		Host and port of HTTP server
+	*/
+	host: '0.0.0.0',
+	port: 3000,
+	rtp: {
+		host: '0.0.0.0',
+		port: 3100,
+		audio: {
+			sampleRate: 44100,
+			format: 's16be',
+		},
+		/*
+			Allowed IPs that can transmit to the RTP receiver
+			Can be IPv4 or IPv6 IPs or CIDR range, eg: 192.168.16.0/24
+		*/
+		allowedIps: [],
+		/*
+			When RTP receives no data, how long before stopping the encoders and disconnecting
+			the listeners in seconds
+		*/
+		noDataDisconnectDelay: 60
+	},
+	streams: [],
+	station: {
+		name: 'Radio Station',
+		description: 'N/A',
+		genre: 'N/A',
+		public: true,
+	},
+	/*
+		These headers will be appended to all stream responses
+	*/
+	globalHeaders: {
+		'Access-Control-Allow-Origin': '*',
+		'Cache-Control': 'no-store, no-cache, must-revalidate'
+	},
+	/*
+		Minimum log level to print messages: trace, debug, info, warn, error, fatal
+		Default: info => trace and debug messages won't be logged
+	*/
+	logLevel: 'info'
+}
