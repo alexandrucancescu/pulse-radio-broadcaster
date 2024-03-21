@@ -1,7 +1,7 @@
 import { PassThrough } from 'stream'
 import Ffmpeg, { FfmpegCommand } from 'fluent-ffmpeg'
 import type { Logger } from 'pino'
-import EventEmitter from 'events'
+import EventEmitter from 'node:events'
 
 export type InputFormat = {
 	channels?: number

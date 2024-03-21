@@ -1,6 +1,6 @@
 import AudioEncoder, { InputFormat, OutputFormat } from './AudioEncoder.js'
 import Ffmpeg from 'fluent-ffmpeg'
-import { promisify } from 'util'
+import { promisify } from 'node:util'
 import { Logger } from 'pino'
 import AudioFormat from './AudioFormat.js'
 

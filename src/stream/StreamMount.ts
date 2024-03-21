@@ -1,9 +1,9 @@
+import EventEmitter from 'node:events'
 import AudioEncoder, { InputFormat, OutputFormat } from '../encoders/AudioEncoder.js'
 import BurstBuffer from '././BurstBuffer.js'
 import createEncoder from '../encoders/createEncoder.js'
 import { Logger } from 'pino'
 import OggBurstBuffer from './OggBurstBuffer.js'
-import EventEmitter from 'events'
 
 export type StreamConfig = {
 	encoder: OutputFormat

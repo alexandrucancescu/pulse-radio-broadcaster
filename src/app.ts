@@ -1,9 +1,9 @@
+import { join } from 'node:path'
 import Fastify from 'fastify'
 import log from './util/log.js'
 import StreamManager from './stream/StreamManager.js'
 import AutoLoad from '@fastify/autoload'
 import { dirname } from 'desm'
-import { join } from 'path'
 import createStreamHandler from './stream/StreamHandler.js'
 import type ListenerStats from './stats/ListenerStats.js'
 

@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import createApp from './app.js'
 import RtpReceiver from './rtp/RtpReceiver.js'
 import config from './config.js'
@@ -5,7 +6,6 @@ import StreamManager from './stream/StreamManager.js'
 import type ListenerStats from './stats/ListenerStats.js'
 import { createWorkerProxy } from './workers/worker-rpc.js'
 import { dirname } from 'desm'
-import { resolve } from 'path'
 import log from './util/log.js'
 
 log.info(config, 'Compiled configuration:')

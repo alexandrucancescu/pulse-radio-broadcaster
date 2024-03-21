@@ -1,11 +1,11 @@
+import * as process from 'node:process'
+import EventEmitter from 'node:events'
+import { createSocket, Socket as DgramSocket } from 'node:dgram'
 import log from '../util/log.js'
-import { createSocket, Socket as DgramSocket } from 'dgram'
 import { RemoteInfo } from 'node:dgram'
 import parseRtpPacket, { RtpPacket } from './rtp.js'
-import * as process from 'process'
 import config from '../config.js'
 import ip from 'ip'
-import EventEmitter from 'events'
 
 type ConstructorProps = {
 	port: number

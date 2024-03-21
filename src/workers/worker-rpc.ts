@@ -1,5 +1,4 @@
-import { parentPort, Worker, isMainThread } from 'worker_threads'
-import log from '../util/log.js'
+import { parentPort, Worker, isMainThread } from 'node:worker_threads'
 
 type WorkerResultMessage = {
 	requestId: number
