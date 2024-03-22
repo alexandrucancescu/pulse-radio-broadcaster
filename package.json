@@ -1,6 +1,6 @@
 {
   "name": "pulse-radio-broadcaster",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Online radio broadcasting server that converts RTP PCM data into various formats including AAC, MP3, Opus, and more. It features customisable streaming points, burst buffering for seamless listening, and comprehensive statistics, making it a highly configurable solution.",
   "exports": "./dist/run.js",
   "engines": {
@@ -10,7 +10,8 @@
     "pulse-radio": "./dist/run.js"
   },
   "scripts": {
-    "start": "node dist/run.js"
+    "start": "node dist/run.js",
+    "print-config": "node dist/util/printConfig.js"
   },
   "type": "module",
   "author": "Alexandru Cancescu",

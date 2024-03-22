@@ -19,7 +19,7 @@ const streamManager = new StreamManager(rtpReceiver, config.rtp.audio, config.st
 streamManager.start()
 
 const listenerStats = createWorkerProxy<ListenerStats>(
-	resolve(_dirname, './stats-worker/listeners-worker.js')
+	resolve(_dirname, './workers/listeners-worker.js')
 )
 
 await createApp(streamManager, listenerStats).listen({
