@@ -1,31 +1,23 @@
 import { Logger } from 'pino'
+import BurstBuffer from './BurstBuffer.js'
 
-export default class OggBurstBuffer {
-	private readonly byteSize: number
-	private readonly log: Logger
-	private readonly chunks: Buffer[]
-	private buffer: Buffer
+export default class OggBurstBuffer extends BurstBuffer {
 	private codecHeader?: Buffer
 
 	constructor(byteSize: number, log: Logger) {
-		this.byteSize = byteSize
-		this.buffer = Buffer.alloc(0)
-		this.chunks = []
-		this.log = log
+		super(byteSize, log)
 	}
 
 	public clear() {
-		this.buffer = Buffer.alloc(0)
+		super.clear()
 		this.codecHeader = undefined
-		delete this.codecHeader
 	}
 
 	public get isReady() {
-		return this.buffer.byteLength === this.byteSize
+		return this.codecHeader !== undefined
 	}
 
 	write(chunk: Buffer): void {
-		//TODO Better header handling
 		if (!this.codecHeader) {
 			this.codecHeader = chunk
 			this.log.warn(chunk.toString())
@@ -33,27 +25,12 @@ export default class OggBurstBuffer {
 			return
 		}
 
-		this.chunks.push(chunk)
-
-		let chunksByteLength = this.chunks.reduce(
-			(accumulator, chunk) => accumulator + chunk.byteLength,
-			0
-		)
-
-		while (chunksByteLength > this.byteSize && this.chunks.length > 0) {
-			const removedChunk = this.chunks.shift()!
-			chunksByteLength -= removedChunk.byteLength
-		}
-
-		// noinspection TypeScriptValidateJSTypes
-		this.buffer = Buffer.concat(this.chunks)
+		super.write(chunk)
 	}
 
 	public get burstBuffer(): Buffer {
-		return this.codecHeader ? Buffer.concat([this.codecHeader, this.buffer]) : this.buffer
-	}
-
-	end(): void {
-		throw new Error('Method not implemented.')
+		return this.codecHeader
+			? Buffer.concat([this.codecHeader, this.buffer])
+			: this.buffer
 	}
 }

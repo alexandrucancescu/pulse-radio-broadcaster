@@ -40,5 +40,15 @@
 		Minimum log level to print messages: trace, debug, info, warn, error, fatal
 		Default: info => trace and debug messages won't be logged
 	*/
-	logLevel: 'info'
+	logLevel: 'info',
+
+	/*
+		Username and password for accessing /stats in the form
+		{
+			username: string
+			password: string - minimum length 8 characters
+		}
+		Optional, can be null
+	*/
+	statisticsCredentials: null
 }

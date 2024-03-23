@@ -130,6 +130,10 @@ class AudioEncoder extends EventEmitter {
 		return this.outputFormat.bitrate ?? 128
 	}
 
+	public get bitRateBytes(): number {
+		return this.bitRate * 125
+	}
+
 	public get format(): string {
 		return this.outputFormat.format
 	}

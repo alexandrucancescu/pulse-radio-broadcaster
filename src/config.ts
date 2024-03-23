@@ -1,7 +1,7 @@
 import { Static, Type } from '@sinclair/typebox'
 import getConfig from 'paranoid-config'
 
-const { Object, String, Integer, Array, Optional, Record, Boolean } = Type
+const { Object, String, Integer, Array, Optional, Record, Boolean, Union, Null } = Type
 
 const schema = Object(
 	{
@@ -46,6 +46,15 @@ const schema = Object(
 		),
 		globalHeaders: Optional(Record(String(), String())),
 		logLevel: Optional(String()),
+		statisticsCredentials: Optional(
+			Union([
+				Object({
+					username: String(),
+					password: String({ minLength: 8 }),
+				}),
+				Null(),
+			])
+		),
 	},
 	{ additionalProperties: false }
 )

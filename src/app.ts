@@ -24,6 +24,7 @@ export default function createApp(streamManager: StreamManager, listenerStats: L
 		options: {
 			streamManager,
 			listenerStats,
+			log,
 		},
 	})
 

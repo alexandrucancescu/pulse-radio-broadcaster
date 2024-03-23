@@ -13,42 +13,68 @@ export type StreamConfig = {
 	headers?: Record<string, string>
 }
 
-export type ConsumerHandler = (chunk: Buffer) => void
-
-declare interface StreamMount {
-	on(event: 'data', handler: (chunk: Buffer) => void): this
-	on(event: 'end', handler: () => void): this
+export type Consumer = {
+	onData: (chunk: Buffer) => void
+	onEnd: () => void
 }
 
-class StreamMount extends EventEmitter {
-	private readonly buffer: BurstBuffer | OggBurstBuffer
+//Default burst buffer in seconds
+const DEFAULT_BURST_SEC = 6
+
+//todo change event emitter to custom listener handler
+class StreamMount {
+	private readonly burst: BurstBuffer | OggBurstBuffer
+	private readonly log: Logger
 	public readonly encoder: AudioEncoder
 	public readonly config: StreamConfig
-	public readonly consumers: ConsumerHandler[]
+	public readonly consumers: Set<Consumer>
 
 	constructor(inputFormat: InputFormat, config: StreamConfig, log: Logger) {
-		super()
 		this.config = config
-		this.consumers = []
+		this.log = log
+		this.consumers = new Set()
 
 		this.encoder = createEncoder(inputFormat, config.encoder, log)
-		this.buffer = new (config.encoder.format === 'opus' ? OggBurstBuffer : BurstBuffer)(
-			config.burstSize ?? (config.encoder.bitrate ?? 128) * 60 * 8,
-			log
+
+		const burstSize = config.burstSize ?? this.encoder.bitRateBytes * DEFAULT_BURST_SEC
+
+		const BurstBufferClass =
+			config.encoder.format === 'opus' ? OggBurstBuffer : BurstBuffer
+
+		//todo allow burst size in seconds
+		this.burst = new BurstBufferClass(burstSize, log)
+
+		log.info(
+			`Burst: ${burstSize} bytes ~= ${(burstSize / this.encoder.bitRateBytes).toFixed(1)} seconds` +
+				` | ${this.config.encoder.format} ${this.encoder.bitRate}kbps`
 		)
 
 		this.encoder.on('restart', () => {
-			this.buffer.clear()
+			this.burst.clear()
 		})
 
 		this.encoder.on('data', chunk => {
-			this.buffer.write(chunk)
-			this.emit('data', chunk)
+			this.burst.write(chunk)
+			this.consumers.forEach(consumer => consumer.onData(chunk))
 		})
 	}
 
+	public addConsumer(consumer: Consumer) {
+		this.consumers.add(consumer)
+
+		const burst = this.burstBuffer
+
+		this.log.trace(`Writing burst ${burst.length} bytes`)
+
+		consumer.onData(burst)
+	}
+
+	public removeConsumer(consumer: Consumer) {
+		this.consumers.delete(consumer)
+	}
+
 	public get burstBuffer(): Buffer {
-		return this.buffer.burstBuffer
+		return this.burst.burstBuffer
 	}
 
 	public get isActive(): boolean {
@@ -60,9 +86,9 @@ class StreamMount extends EventEmitter {
 	}
 
 	public stop() {
-		this.buffer.clear()
-		this.emit('end')
+		this.burst.clear()
 		this.encoder.stop()
+		this.consumers.forEach(consumer => consumer.onEnd())
 	}
 }
 

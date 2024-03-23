@@ -36,7 +36,7 @@ export default class StreamManager {
 					log.child(
 						{},
 						{
-							msgPrefix: `[STREAM MOUNT ~ ${streamConfig.paths[0]}] `,
+							msgPrefix: `[STREAM ${streamConfig.paths[0]}] `,
 						}
 					)
 				)

@@ -16,11 +16,11 @@ that support RTP like:
 
 ## To Do:
 
-- Handle RTP not receiving data 
-- Better RTP sequence numbers handling 
-- Sensible defaults config 
-- Better OGG header handling 
-- Add stats grouped by parameters
+- [x] Handle RTP not receiving data
+- [ ] Better RTP sequence numbers handling 
+- [x] Sensible defaults config 
+- [ ] Better OGG header handling 
+- [ ] Add stats grouped by parameters
 
 
 ## Roadmap:
@@ -32,6 +32,8 @@ that support RTP like:
 - Better OGG support with Vorbis and FLAC
 - PCM audio equalizer
 - Running in clusters for high listeners count
+- HLS streaming support
+- Statistics dashboard
 
 #### Warning
 Ogg container is experimental (Vorbis, Opus, Flac)

@@ -5,6 +5,6 @@
 	"tabWidth": 3,
 	"useTabs": true,
 	"endOfLine": "lf",
-	"printWidth": 95,
+	"printWidth": 90,
 	"arrowParens": "avoid"
 }

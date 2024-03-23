@@ -1,4 +1,5 @@
-import { lookup } from 'fast-geoip'
+import { lookup as ipLookup } from 'fast-geoip'
+import { lookup as uaLookup } from 'useragent'
 
 export type Listener = {
 	id: number
@@ -8,7 +9,10 @@ export type Listener = {
 		region: string
 	}
 	referer?: string
-	userAgent?: string
+	userAgent?: {
+		family: string
+		major: string
+	}
 	startTime: number
 	streamPath: string
 }
@@ -28,26 +32,34 @@ export default class ListenerStats {
 		userAgent?: string,
 		referer?: string
 	): Promise<number> {
-		const geolocation = await lookup(ip)
-
-		const id = this.getNextId()
-
-		this.listeners.push({
-			id,
+		const listener: Listener = {
+			id: this.getNextId(),
 			ip,
-			geolocation: geolocation
-				? {
-						country: geolocation.country,
-						region: geolocation.region,
-					}
-				: undefined,
+			streamPath,
 			referer,
 			startTime: Date.now(),
-			userAgent,
-			streamPath,
-		})
+		}
 
-		return id
+		const geolocation = await ipLookup(ip)
+
+		if (geolocation) {
+			listener.geolocation = {
+				country: geolocation.country,
+				region: geolocation.region,
+			}
+		}
+
+		if (userAgent) {
+			const parsedUa = uaLookup(userAgent)
+			listener.userAgent = {
+				family: parsedUa.family,
+				major: parsedUa.major,
+			}
+		}
+
+		this.listeners.push(listener)
+
+		return listener.id
 	}
 
 	public async removeListener(id: number) {

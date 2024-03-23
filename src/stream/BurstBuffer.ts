@@ -1,10 +1,10 @@
 import { Logger } from 'pino'
 
 export default class BurstBuffer {
-	private readonly byteSize: number
-	private readonly log: Logger
-	private readonly chunks: Buffer[]
-	private buffer: Buffer
+	protected readonly byteSize: number
+	protected readonly log: Logger
+	protected readonly chunks: Buffer[]
+	protected buffer: Buffer
 
 	constructor(byteSize: number, log: Logger) {
 		this.byteSize = byteSize
@@ -18,21 +18,26 @@ export default class BurstBuffer {
 	}
 
 	public get isReady() {
-		return this.buffer.byteLength === this.byteSize
+		return this.buffer.byteLength >= this.byteSize
 	}
 
 	write(chunk: Buffer): void {
-		let chunksByteLength = this.chunks.reduce(
+		this.chunks.push(chunk)
+
+		this.recalculateBuffer()
+	}
+
+	protected recalculateBuffer(): void {
+		let totalSize = this.chunks.reduce(
 			(accumulator, chunk) => accumulator + chunk.byteLength,
 			0
 		)
 
-		while (chunksByteLength > this.byteSize && this.chunks.length > 0) {
+		while (totalSize > this.byteSize && this.chunks.length > 0) {
 			const removedChunk = this.chunks.shift()!
-			chunksByteLength -= removedChunk.byteLength
+			totalSize -= removedChunk.byteLength
 		}
 
-		// noinspection TypeScriptValidateJSTypes
 		this.buffer = Buffer.concat(this.chunks)
 	}
 
