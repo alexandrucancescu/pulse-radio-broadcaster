@@ -1,0 +1,29 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 50
+      name: "Warm up the application"
+    - duration: 120
+      arrivalRate: 50
+      name: "Sustained load"
+
+scenarios:
+  - name: "Stream MP3"
+    flow:
+      - get:
+          url: "/stream.mp3"
+          forever: true
+
+  - name: "Stream AAC"
+    flow:
+      - get:
+          url: "/stream.aac"
+          forever: true
+
+  - name: "Stream Opus"
+    flow:
+      - get:
+          url: "/stream.opus"
+          forever: truex

@@ -111,6 +111,7 @@ class AudioEncoder extends EventEmitter {
 	public end() {}
 
 	public stop() {
+		//todo make sure ended; add timeout
 		if (!this.isRunning) return
 		this.ffmpeg.removeAllListeners()
 		this.ffmpeg.kill('SIGINT')

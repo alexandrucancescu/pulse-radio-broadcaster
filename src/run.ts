@@ -1,3 +1,4 @@
+import 'newrelic'
 import { resolve } from 'node:path'
 import createApp from './app.js'
 import RtpReceiver from './rtp/RtpReceiver.js'
@@ -22,7 +23,9 @@ const listenerStats = createWorkerProxy<ListenerStats>(
 	resolve(_dirname, './workers/listeners-worker.js')
 )
 
-await createApp(streamManager, listenerStats).listen({
-	port: config.port,
-	host: config.host ?? '0.0.0.0',
-})
+await createApp(streamManager, listenerStats)
+	.listen({
+		port: config.port,
+		host: config.host ?? '0.0.0.0',
+	})
+	.then(() => log.info(`HTTP listening on ${config.host ?? '0.0.0.0'}:${config.port}`))

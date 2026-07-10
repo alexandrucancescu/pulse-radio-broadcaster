@@ -63,9 +63,9 @@ export function createWorkerProxy<T>(script: string): T {
 }
 
 export function initializeRpcMethods<T>(workerObject: T) {
-	if (isMainThread)
+	if (isMainThread || !parentPort)
 		throw new Error('initializeRpcMethods should only be called from worker threads')
-	parentPort!.on('message', ({ method, args, requestId }: WorkerRpcMessage<T>) => {
+	parentPort.on('message', ({ method, args, requestId }: WorkerRpcMessage<T>) => {
 		// log.trace({ method, args, requestId, }, 'Received from main thread')
 
 		const func = workerObject[method]
@@ -74,10 +74,10 @@ export function initializeRpcMethods<T>(workerObject: T) {
 
 		Promise.resolve(func.bind(workerObject)(...args))
 			.then(result => {
-				parentPort!.postMessage({ requestId, result })
+				parentPort?.postMessage({ requestId, result })
 			})
 			.catch(error => {
-				parentPort!.postMessage({ requestId, error })
+				parentPort?.postMessage({ requestId, error })
 			})
 	})
 }

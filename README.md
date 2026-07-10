@@ -21,6 +21,7 @@ that support RTP like:
 - [x] Sensible defaults config 
 - [ ] Better OGG header handling 
 - [ ] Add stats grouped by parameters
+- [ ] Github action for compiled releases/package
 
 
 ## Roadmap:

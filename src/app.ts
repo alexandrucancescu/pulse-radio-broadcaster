@@ -7,7 +7,10 @@ import { dirname } from 'desm'
 import createStreamHandler from './stream/StreamHandler.js'
 import type ListenerStats from './stats/ListenerStats.js'
 
-export default function createApp(streamManager: StreamManager, listenerStats: ListenerStats) {
+export default function createApp(
+	streamManager: StreamManager,
+	listenerStats: ListenerStats
+) {
 	const app = Fastify({
 		logger: log.child(
 			{},
