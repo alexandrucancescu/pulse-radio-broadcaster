@@ -4,7 +4,7 @@ import { createSocket, Socket as DgramSocket } from 'node:dgram'
 import log from '../util/log.js'
 import { RemoteInfo } from 'node:dgram'
 import parseRtpPacket, { RtpPacket } from './rtp.js'
-import config from '../config.js'
+import env from '../env.js'
 import ip from 'ip'
 
 type ConstructorProps = {
@@ -73,8 +73,6 @@ class RtpReceiver extends EventEmitter {
 
 		this.logRtpMessage(remoteInfo, packet)
 
-		//Drop out of order packet; Take into consideration sequence number rollover: 65535 + 1 = 0
-		//TODO improve condition
 		if (
 			this.lastSequenceNumber > packet.sequenceNumber &&
 			this.lastSequenceNumber - packet.sequenceNumber < 3000 &&
@@ -94,7 +92,6 @@ class RtpReceiver extends EventEmitter {
 	}
 
 	private logRtpMessage(remoteInfo: RemoteInfo, packet: RtpPacket) {
-		//Log only if it's new source or no message was received for last 500ms
 		const timeSinceLastPacket = Date.now() - this.lastPacketTime
 		if (remoteInfo.address !== this.sourceAddress) {
 			if (timeSinceLastPacket > 500) {
@@ -134,11 +131,10 @@ class RtpReceiver extends EventEmitter {
 }
 
 function isIpAllowed(queriedIp: string) {
-	return config.rtp.allowedIps.some(ipOrCidrSubnet => {
+	return env.RTP_ALLOWED_IPS.some(ipOrCidrSubnet => {
 		try {
 			return ip.isEqual(queriedIp, ipOrCidrSubnet)
 		} catch (_) {
-			//ip is in CIDR notation so it trows error
 			try {
 				return ip.cidrSubnet(ipOrCidrSubnet).contains(queriedIp)
 			} catch (err) {

@@ -1,5 +1,5 @@
-import config from '../config.js'
-import { StreamConfig } from '../stream/StreamMount.js'
+import env from '../env.js'
+import type { MountConfig } from '../stream/StreamMount.js'
 import AudioFormat from '../encoders/AudioFormat.js'
 
 const formatEncodingTypeMap: Record<AudioFormat, string> = {
@@ -19,7 +19,7 @@ const defaultStreamHeaders = {
 	Expires: 'Wed, 19 Dec 1980 02:47:29 GMT',
 }
 
-export function compileHeadersForStream(streamConfig: StreamConfig) {
+export function compileHeadersForStream(streamConfig: MountConfig) {
 	return mergeHeaders(
 		defaultStreamHeaders,
 		{
@@ -27,12 +27,12 @@ export function compileHeadersForStream(streamConfig: StreamConfig) {
 				formatEncodingTypeMap[<AudioFormat>streamConfig.encoder.format] ??
 				streamConfig.contentType,
 			'Icy-Br': streamConfig.encoder.bitrate?.toString() ?? '128',
-			'Icy-Genre': config.station?.genre ?? 'N/A',
-			'Icy-Name': config.station?.name ?? 'N/A',
-			'Icy-Description': config.station?.description ?? 'N/A',
-			'Icy-Pub': config.station?.public === false ? '0' : '1',
+			'Icy-Genre': env.STATION_GENRE,
+			'Icy-Name': env.STATION_NAME,
+			'Icy-Description': env.STATION_DESCRIPTION,
+			'Icy-Pub': env.STATION_PUBLIC ? '1' : '0',
 		},
-		config.globalHeaders,
+		env.GLOBAL_HEADERS,
 		streamConfig.headers
 	)
 }

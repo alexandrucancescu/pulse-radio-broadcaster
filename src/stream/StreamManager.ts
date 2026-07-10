@@ -1,7 +1,7 @@
 import RtpReceiver from '../rtp/RtpReceiver.js'
-import StreamMount, { StreamConfig } from './StreamMount.js'
+import StreamMount from './StreamMount.js'
 import log from '../util/log.js'
-import config from '../config.js'
+import env, { StreamConfig } from '../env.js'
 
 export default class StreamManager {
 	private lastReceivedDataTime: number
@@ -45,7 +45,7 @@ export default class StreamManager {
 
 	private initDataCheck() {
 		setInterval(() => {
-			const disconnectDelaySeconds = config.rtp.noDataDisconnectDelay ?? 60
+			const disconnectDelaySeconds = env.RTP_NO_DATA_DISCONNECT_DELAY
 
 			if (Date.now() - this.lastReceivedDataTime > disconnectDelaySeconds * 1000) {
 				if (!this.noDataEncodersStopped) {

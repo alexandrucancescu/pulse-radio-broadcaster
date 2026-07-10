@@ -1,11 +1,11 @@
-import EventEmitter from 'node:events'
 import AudioEncoder, { InputFormat, OutputFormat } from '../encoders/AudioEncoder.js'
 import BurstBuffer from '././BurstBuffer.js'
 import createEncoder from '../encoders/createEncoder.js'
 import { Logger } from 'pino'
 import OggBurstBuffer from './OggBurstBuffer.js'
+import type { StreamConfig } from '../env.js'
 
-export type StreamConfig = {
+export type MountConfig = {
 	encoder: OutputFormat
 	paths: string[]
 	burstSize?: number
@@ -18,30 +18,44 @@ export type Consumer = {
 	onEnd: () => void
 }
 
-//Default burst buffer in seconds
 const DEFAULT_BURST_SEC = 6
 
-//todo change event emitter to custom listener handler
+function toMountConfig(stream: StreamConfig): MountConfig {
+	return {
+		encoder: {
+			format: stream.format,
+			bitrate: stream.bitrate,
+			channels: stream.channels,
+			codec: stream.codec,
+			sampleRate: stream.sampleRate,
+			options: stream.options,
+		},
+		paths: stream.paths,
+		burstSize: stream.burstSize,
+		contentType: stream.contentType,
+		headers: stream.headers,
+	}
+}
+
 class StreamMount {
 	private readonly burst: BurstBuffer | OggBurstBuffer
 	private readonly log: Logger
 	public readonly encoder: AudioEncoder
-	public readonly config: StreamConfig
+	public readonly config: MountConfig
 	public readonly consumers: Set<Consumer>
 
-	constructor(inputFormat: InputFormat, config: StreamConfig, log: Logger) {
-		this.config = config
+	constructor(inputFormat: InputFormat, streamConfig: StreamConfig, log: Logger) {
+		this.config = toMountConfig(streamConfig)
 		this.log = log
 		this.consumers = new Set()
 
-		this.encoder = createEncoder(inputFormat, config.encoder, log)
+		this.encoder = createEncoder(inputFormat, this.config.encoder, log)
 
-		const burstSize = config.burstSize ?? this.encoder.bitRateBytes * DEFAULT_BURST_SEC
+		const burstSize = this.config.burstSize ?? this.encoder.bitRateBytes * DEFAULT_BURST_SEC
 
 		const BurstBufferClass =
-			config.encoder.format === 'opus' ? OggBurstBuffer : BurstBuffer
+			this.config.encoder.format === 'opus' ? OggBurstBuffer : BurstBuffer
 
-		//todo allow burst size in seconds
 		this.burst = new BurstBufferClass(burstSize, log)
 
 		log.info(

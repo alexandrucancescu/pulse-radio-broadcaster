@@ -5,6 +5,7 @@ dist
 node_modules
 
 src/test.ts
+.env
 
 config/*
 !config/default.json5
