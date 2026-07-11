@@ -5,7 +5,7 @@ import log from '../util/log.js'
 import { RemoteInfo } from 'node:dgram'
 import parseRtpPacket, { RtpPacket } from './rtp.js'
 import env from '../env.js'
-import ip from 'ip'
+import { isIpEqualOrInCidr } from '../util/ip.js'
 
 type ConstructorProps = {
 	port: number
@@ -43,10 +43,8 @@ class RtpReceiver extends EventEmitter {
 		})
 
 		this.udpServer.on('close', () => {
-			log.error('UDP server closed')
+			log.error('UDP server closed, reconnecting in 1s')
 			this.isRunning = false
-
-			this.removeAllListeners()
 
 			setTimeout(() => this.start(), 1000)
 		})
@@ -131,17 +129,7 @@ class RtpReceiver extends EventEmitter {
 }
 
 function isIpAllowed(queriedIp: string) {
-	return env.RTP_ALLOWED_IPS.some(ipOrCidrSubnet => {
-		try {
-			return ip.isEqual(queriedIp, ipOrCidrSubnet)
-		} catch (_) {
-			try {
-				return ip.cidrSubnet(ipOrCidrSubnet).contains(queriedIp)
-			} catch (err) {
-				return false
-			}
-		}
-	})
+	return env.RTP_ALLOWED_IPS.some(allowed => isIpEqualOrInCidr(queriedIp, allowed))
 }
 
 export default RtpReceiver

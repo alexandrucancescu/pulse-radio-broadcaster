@@ -14,6 +14,7 @@ export default class BurstBuffer {
 	}
 
 	public clear() {
+		this.chunks.length = 0
 		this.buffer = Buffer.alloc(0)
 	}
 

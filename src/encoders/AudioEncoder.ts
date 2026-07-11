@@ -108,8 +108,6 @@ class AudioEncoder extends EventEmitter {
 		this.ffmpeg.pipe(this.outputStream)
 	}
 
-	public end() {}
-
 	public stop() {
 		//todo make sure ended; add timeout
 		if (!this.isRunning) return

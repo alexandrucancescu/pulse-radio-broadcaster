@@ -22,7 +22,7 @@ export function createWorkerProxy<T>(script: string): T {
 
 	let currentRequestId = 0
 
-	let requestsMap = new Map<number, PromiseHandler>()
+	const requestsMap = new Map<number, PromiseHandler>()
 
 	worker.on('message', ({ requestId, result, error }: WorkerResultMessage) => {
 		// log.trace({ requestId, result, error }, 'Received from worker')
@@ -47,6 +47,7 @@ export function createWorkerProxy<T>(script: string): T {
 				(_, method: string) =>
 				(...args: unknown[]) => {
 					return new Promise((resolve, reject) => {
+						if (currentRequestId >= Number.MAX_SAFE_INTEGER) currentRequestId = 0
 						const requestId = currentRequestId++
 
 						requestsMap.set(requestId, { resolve, reject })

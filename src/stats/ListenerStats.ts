@@ -65,7 +65,7 @@ export default class ListenerStats {
 	public async removeListener(id: number) {
 		const index = this.listeners.findIndex(listener => listener.id === id)
 
-		if (index) this.listeners.splice(index, 1)
+		if (index !== -1) this.listeners.splice(index, 1)
 	}
 
 	private getNextId(): number {

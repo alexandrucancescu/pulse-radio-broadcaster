@@ -5,7 +5,6 @@ import env from './env.js'
 import StreamManager from './stream/StreamManager.js'
 import type ListenerStats from './stats/ListenerStats.js'
 import { createWorkerProxy } from './workers/worker-rpc.js'
-import { dirname } from 'desm'
 import log from './util/log.js'
 
 log.info(
@@ -18,8 +17,6 @@ log.info(
 	'Configuration:'
 )
 
-const _dirname = dirname(import.meta.url)
-
 const rtpReceiver = new RtpReceiver({ port: env.RTP_PORT, host: env.RTP_HOST })
 
 const streamManager = new StreamManager(
@@ -31,7 +28,7 @@ const streamManager = new StreamManager(
 streamManager.start()
 
 const listenerStats = createWorkerProxy<ListenerStats>(
-	resolve(_dirname, './workers/listeners-worker.js')
+	resolve(import.meta.dirname, './workers/listeners-worker.js')
 )
 
 await createApp(streamManager, listenerStats)

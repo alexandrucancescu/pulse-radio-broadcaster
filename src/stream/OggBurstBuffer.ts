@@ -20,8 +20,6 @@ export default class OggBurstBuffer extends BurstBuffer {
 	write(chunk: Buffer): void {
 		if (!this.codecHeader) {
 			this.codecHeader = chunk
-			this.log.warn(chunk.toString())
-
 			return
 		}
 
