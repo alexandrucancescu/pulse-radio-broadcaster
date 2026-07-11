@@ -16,9 +16,18 @@ const streamSchema = z.object({
 
 export type StreamConfig = z.infer<typeof streamSchema>
 
-const commaSeparated = z
-	.string()
-	.transform(s => s.split(',').map(v => v.trim()).filter(Boolean))
+const json = <T extends z.ZodType>(schema: T) =>
+	z.preprocess((v) => (typeof v === 'string' ? JSON.parse(v) : v), schema)
+
+const csv = z.preprocess(
+	(v) => (typeof v === 'string' ? v.split(',').map(s => s.trim()).filter(Boolean) : v),
+	z.array(z.string()),
+)
+
+const boolStr = z.preprocess(
+	(v) => (v === undefined || v === '' ? true : v === 'true'),
+	z.boolean(),
+)
 
 const env = createEnv({
 	runtimeEnv: process.env,
@@ -31,27 +40,19 @@ const env = createEnv({
 		RTP_PORT: z.coerce.number().int().min(0).default(3100),
 		RTP_SAMPLE_RATE: z.coerce.number().int().positive().default(44100),
 		RTP_FORMAT: z.string().default('s16be'),
-		RTP_ALLOWED_IPS: commaSeparated,
+		RTP_ALLOWED_IPS: csv,
 		RTP_NO_DATA_DISCONNECT_DELAY: z.coerce.number().int().positive().default(60),
 
-		STREAMS: z
-			.string()
-			.transform(s => JSON.parse(s) as unknown)
-			.pipe(z.array(streamSchema).min(1)),
+		STREAMS: json(z.array(streamSchema).min(1)),
 
 		STATION_NAME: z.string().default('Radio Station'),
 		STATION_DESCRIPTION: z.string().default('N/A'),
 		STATION_GENRE: z.string().default('N/A'),
-		STATION_PUBLIC: z
-			.enum(['true', 'false'])
-			.transform(v => v === 'true')
-			.default('true'),
+		STATION_PUBLIC: boolStr,
 
-		GLOBAL_HEADERS: z
-			.string()
-			.transform(s => JSON.parse(s) as unknown)
-			.pipe(z.record(z.string()))
-			.default('{"Access-Control-Allow-Origin":"*","Cache-Control":"no-store, no-cache, must-revalidate"}'),
+		GLOBAL_HEADERS: json(z.record(z.string())).default(
+			'{"Access-Control-Allow-Origin":"*","Cache-Control":"no-store, no-cache, must-revalidate"}',
+		),
 
 		LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
 

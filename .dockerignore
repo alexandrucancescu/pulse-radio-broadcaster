@@ -1,0 +1,13 @@
+node_modules
+dist
+.env
+.git
+.idea
+.DS_Store
+config
+*.log
+.prettierrc
+.env.example
+README.md
+artillery.yml
+config
