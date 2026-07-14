@@ -5,10 +5,12 @@ RUN npm install -g pnpm@10
 WORKDIR /app
 
 FROM base AS builder
-COPY package.json pnpm-lock.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install
+COPY package.json pnpm-lock.yaml tsconfig.json ./
+COPY ui/package.json ui/pnpm-lock.yaml ./ui/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install && pnpm --dir ui install
 COPY src/ src/
-COPY tsconfig.json ./
+COPY ui/ ui/
+ENV SKIP_ENV_VALIDATION=1
 RUN pnpm build
 
 FROM base AS prod-deps

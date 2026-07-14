@@ -10,7 +10,9 @@
     "pulse-radio": "./dist/run.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && pnpm --dir ui build",
+    "build:server": "tsc",
+    "build:ui": "pnpm --dir ui build",
     "start": "node dist/run.js",
     "dev": "node --env-file=.env dist/run.js"
   },
@@ -18,11 +20,12 @@
   "author": "Alexandru Cancescu",
   "license": "ISC",
   "dependencies": {
-    "@fastify/autoload": "^5.8.0",
-    "@fastify/basic-auth": "^5.1.1",
+    "@fastify/autoload": "^6.4.0",
+    "@fastify/basic-auth": "^6.2.0",
+    "@fastify/static": "^10.1.0",
     "@t3-oss/env-core": "^0.13.11",
     "fast-geoip": "^1.1.88",
-    "fastify": "^4.26.1",
+    "fastify": "^5.10.0",
     "fluent-ffmpeg": "github:alexandrucancescu/node-fluent-ffmpeg",
     "ip": "^2.0.1",
     "pino": "^10.3.1",

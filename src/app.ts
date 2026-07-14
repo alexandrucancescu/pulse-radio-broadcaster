@@ -3,6 +3,7 @@ import Fastify from 'fastify'
 import log from './util/log.js'
 import StreamManager from './stream/StreamManager.js'
 import AutoLoad from '@fastify/autoload'
+import fastifyStatic from '@fastify/static'
 import createStreamHandler from './stream/StreamHandler.js'
 import type ListenerStats from './stats/ListenerStats.js'
 
@@ -11,7 +12,7 @@ export default function createApp(
 	listenerStats: ListenerStats
 ) {
 	const app = Fastify({
-		logger: log.child(
+		loggerInstance: log.child(
 			{},
 			{
 				msgPrefix: '[FASTIFY] ',
@@ -28,6 +29,15 @@ export default function createApp(
 			listenerStats,
 			log,
 		},
+	})
+
+	app.register(fastifyStatic, {
+		root: join(import.meta.dirname, './public'),
+		wildcard: false,
+	})
+
+	app.setNotFoundHandler((_, reply) => {
+		reply.sendFile('index.html')
 	})
 
 	streamManager.streams().forEach(stream => {
