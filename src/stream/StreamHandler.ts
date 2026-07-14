@@ -26,19 +26,14 @@ export default function createStreamHandler(
 		reply.raw.writeHead(200, compiledHeaders)
 		reply.raw.flushHeaders()
 
-		let listenerId: number
+		const listenerIdPromise = listenerStats.addListener(
+			req.ip,
+			req.routeOptions.url!,
+			req.headers['user-agent'],
+			req.headers.referer
+		)
 
-		listenerStats
-			.addListener(
-				req.ip,
-				req.routeOptions.url!,
-				req.headers['user-agent'],
-				req.headers.referer
-			)
-			.then(id => {
-				listenerId = id
-				log.trace(`Listener ${listenerId} connected`)
-			})
+		listenerIdPromise.then(id => log.trace(`Listener ${id} connected`))
 
 		const consumer: Consumer = {
 			onData: (chunk: Buffer) => reply.raw.write(chunk),
@@ -52,12 +47,13 @@ export default function createStreamHandler(
 		}
 
 		const replyCloseHandler = () => {
-			log.trace(`Listener ${listenerId} disconnected`)
 			stream.removeConsumer(consumer)
-
 			reply.raw.removeAllListeners()
 
-			if (listenerId) listenerStats.removeListener(listenerId)
+			listenerIdPromise.then(id => {
+				log.trace(`Listener ${id} disconnected`)
+				listenerStats.removeListener(id)
+			})
 		}
 
 		stream.addConsumer(consumer)

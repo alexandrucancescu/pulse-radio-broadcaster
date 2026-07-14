@@ -27,10 +27,14 @@ export default async function (app: FastifyInstance, { listenerStats, log }: Opt
 		authenticate: true,
 	}).after(() => {
 		app.get('/stats', { onRequest: app.basicAuth }, async () => {
-			const listeners = await listenerStats.getAllListeners()
+			const [listeners, listenersByReferer] = await Promise.all([
+				listenerStats.getAllListeners(),
+				listenerStats.getListenersByReferer(),
+			])
 
 			return {
 				listenerCount: listeners.length,
+				listenersByReferer,
 				listeners,
 			}
 		})

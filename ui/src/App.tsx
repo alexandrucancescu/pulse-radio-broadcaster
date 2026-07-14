@@ -1,5 +1,8 @@
 import { useStats } from './hooks/useStats'
 import ListenerTable from './components/ListenerTable'
+import RefererBreakdown from './components/RefererBreakdown'
+import CountryBreakdown from './components/CountryBreakdown'
+import TopListeners from './components/TopListeners'
 
 export default function App() {
   const { data, isLoading, error } = useStats()
@@ -44,6 +47,53 @@ export default function App() {
                   )
             }
           />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900">
+            <div className="border-b border-zinc-800 px-4 py-3">
+              <h2 className="text-sm font-medium text-zinc-400">
+                Listeners by Referer
+              </h2>
+            </div>
+            {isLoading ? (
+              <div className="px-4 py-8 text-center text-zinc-500">
+                Loading...
+              </div>
+            ) : (
+              <RefererBreakdown data={data?.listenersByReferer ?? {}} />
+            )}
+          </div>
+
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900">
+            <div className="border-b border-zinc-800 px-4 py-3">
+              <h2 className="text-sm font-medium text-zinc-400">
+                Listeners by Country
+              </h2>
+            </div>
+            {isLoading ? (
+              <div className="px-4 py-8 text-center text-zinc-500">
+                Loading...
+              </div>
+            ) : (
+              <CountryBreakdown listeners={data?.listeners ?? []} />
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900">
+          <div className="border-b border-zinc-800 px-4 py-3">
+            <h2 className="text-sm font-medium text-zinc-400">
+              Top 10 Listeners by Listening Time
+            </h2>
+          </div>
+          {isLoading ? (
+            <div className="px-4 py-8 text-center text-zinc-500">
+              Loading...
+            </div>
+          ) : (
+            <TopListeners listeners={data?.listeners ?? []} />
+          )}
         </div>
 
         <div className="rounded-lg border border-zinc-800 bg-zinc-900">

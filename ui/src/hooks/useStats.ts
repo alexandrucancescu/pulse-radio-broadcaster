@@ -16,8 +16,9 @@ export type Listener = {
   streamPath: string
 }
 
-type StatsResponse = {
+export type StatsResponse = {
   listenerCount: number
+  listenersByReferer: Record<string, number>
   listeners: Listener[]
 }
 

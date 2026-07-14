@@ -9,6 +9,7 @@ export type Listener = {
 		region: string
 	}
 	referer?: string
+	refererDomain?: string
 	userAgent?: {
 		family: string
 		major: string
@@ -37,6 +38,7 @@ export default class ListenerStats {
 			ip,
 			streamPath,
 			referer,
+			refererDomain: parseRefererDomain(referer),
 			startTime: Date.now(),
 		}
 
@@ -78,5 +80,23 @@ export default class ListenerStats {
 
 	public async getAllListeners(): Promise<Listener[]> {
 		return this.listeners
+	}
+
+	public async getListenersByReferer(): Promise<Record<string, number>> {
+		const counts: Record<string, number> = {}
+		for (const l of this.listeners) {
+			const domain = l.refererDomain ?? 'direct'
+			counts[domain] = (counts[domain] ?? 0) + 1
+		}
+		return counts
+	}
+}
+
+function parseRefererDomain(referer?: string): string | undefined {
+	if (!referer) return undefined
+	try {
+		return new URL(referer).hostname
+	} catch {
+		return undefined
 	}
 }
