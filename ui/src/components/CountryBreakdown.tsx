@@ -1,18 +1,10 @@
-import type { Listener } from '../hooks/useStats'
-
 export default function CountryBreakdown({
-  listeners,
+  data,
 }: {
-  listeners: Listener[]
+  data: Record<string, number>
 }) {
-  const counts: Record<string, number> = {}
-  for (const l of listeners) {
-    const country = l.geolocation?.country ?? 'Unknown'
-    counts[country] = (counts[country] ?? 0) + 1
-  }
-
-  const entries = Object.entries(counts).sort(([, a], [, b]) => b - a)
-  const total = listeners.length
+  const entries = Object.entries(data).sort(([, a], [, b]) => b - a)
+  const total = entries.reduce((sum, [, count]) => sum + count, 0)
 
   if (entries.length === 0) {
     return (

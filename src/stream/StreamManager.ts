@@ -3,6 +3,11 @@ import StreamMount from './StreamMount.js'
 import log from '../util/log.js'
 import env, { StreamConfig } from '../env.js'
 
+export type Interruption = {
+	start: number
+	end?: number
+}
+
 export default class StreamManager {
 	private lastReceivedDataTime: number
 	private noDataEncodersStopped: boolean
@@ -14,6 +19,9 @@ export default class StreamManager {
 		sampleRate: number
 	}
 	private readonly streamConfigs: StreamConfig[]
+
+	private readonly startedAt: number
+	private readonly interruptions: Interruption[]
 
 	constructor(
 		rtpReceiver: RtpReceiver,
@@ -28,6 +36,8 @@ export default class StreamManager {
 		this.rtpReceiver = rtpReceiver
 		this.lastReceivedDataTime = Date.now()
 		this.noDataEncodersStopped = false
+		this.startedAt = Date.now()
+		this.interruptions = []
 		this.streamMounts = this.streamConfigs.map(
 			streamConfig =>
 				new StreamMount(
@@ -55,10 +65,16 @@ export default class StreamManager {
 						`Stopping encoders due to no RTP data for ${disconnectDelaySeconds} seconds`
 					)
 
+					this.interruptions.push({ start: Date.now() })
 					this.streamMounts.forEach(mount => mount.stop())
 				}
 			} else {
 				if (this.noDataEncodersStopped) {
+					const current = this.interruptions[this.interruptions.length - 1]
+					if (current && !current.end) {
+						current.end = Date.now()
+					}
+
 					this.streamMounts
 						.filter(mount => !mount.isActive)
 						.forEach(mount => mount.start())
@@ -89,5 +105,34 @@ export default class StreamManager {
 
 	public streams(): StreamMount[] {
 		return this.streamMounts
+	}
+
+	public getUptime() {
+		const now = Date.now()
+
+		const computeForWindow = (windowMs: number) => {
+			const windowStart = now - windowMs
+			let downtime = 0
+
+			for (const i of this.interruptions) {
+				const start = Math.max(i.start, windowStart)
+				const end = i.end ? Math.min(i.end, now) : now
+				if (start < end) downtime += end - start
+			}
+
+			const elapsed = Math.min(now - this.startedAt, windowMs)
+			if (elapsed <= 0) return 100
+			return ((elapsed - downtime) / elapsed) * 100
+		}
+
+		return {
+			startedAt: this.startedAt,
+			isUp: !this.noDataEncodersStopped,
+			uptime1h: computeForWindow(60 * 60 * 1000),
+			uptime24h: computeForWindow(24 * 60 * 60 * 1000),
+			uptime7d: computeForWindow(7 * 24 * 60 * 60 * 1000),
+			uptime30d: computeForWindow(30 * 24 * 60 * 60 * 1000),
+			interruptions: this.interruptions.slice(-20),
+		}
 	}
 }

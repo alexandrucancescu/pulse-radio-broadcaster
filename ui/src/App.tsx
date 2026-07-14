@@ -3,6 +3,7 @@ import ListenerTable from './components/ListenerTable'
 import RefererBreakdown from './components/RefererBreakdown'
 import CountryBreakdown from './components/CountryBreakdown'
 import TopListeners from './components/TopListeners'
+import UptimePanel from './components/UptimePanel'
 
 export default function App() {
   const { data, isLoading, error } = useStats()
@@ -18,10 +19,14 @@ export default function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard
             label="Listeners"
             value={isLoading ? '—' : String(data?.listenerCount ?? 0)}
+          />
+          <StatCard
+            label="Unique IPs"
+            value={isLoading ? '—' : String(data?.uniqueIpCount ?? 0)}
           />
           <StatCard
             label="Streams"
@@ -39,14 +44,25 @@ export default function App() {
               isLoading
                 ? '—'
                 : String(
-                    new Set(
-                      data?.listeners
-                        .map((l) => l.geolocation?.country)
-                        .filter(Boolean),
-                    ).size,
+                    Object.keys(data?.listenersByCountry ?? {}).length,
                   )
             }
           />
+        </div>
+
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900">
+          <div className="border-b border-zinc-800 px-4 py-3">
+            <h2 className="text-sm font-medium text-zinc-400">
+              Stream Uptime
+            </h2>
+          </div>
+          {isLoading ? (
+            <div className="px-4 py-8 text-center text-zinc-500">
+              Loading...
+            </div>
+          ) : data?.uptime ? (
+            <UptimePanel uptime={data.uptime} />
+          ) : null}
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -76,7 +92,7 @@ export default function App() {
                 Loading...
               </div>
             ) : (
-              <CountryBreakdown listeners={data?.listeners ?? []} />
+              <CountryBreakdown data={data?.listenersByCountry ?? {}} />
             )}
           </div>
         </div>

@@ -1,6 +1,8 @@
 import { lookup as ipLookup } from 'fast-geoip'
 import { lookup as uaLookup } from 'useragent'
 
+const MAX_LISTENERS_PER_IP = 5
+
 export type Listener = {
 	id: number
 	ip: string
@@ -20,11 +22,13 @@ export type Listener = {
 
 export default class ListenerStats {
 	private readonly listeners: Listener[]
+	private readonly ipCounts: Map<string, number>
 
 	private currentId = 0
 
 	constructor() {
 		this.listeners = []
+		this.ipCounts = new Map()
 	}
 
 	public async addListener(
@@ -33,6 +37,8 @@ export default class ListenerStats {
 		userAgent?: string,
 		referer?: string
 	): Promise<number> {
+		const currentCount = this.ipCounts.get(ip) ?? 0
+
 		const listener: Listener = {
 			id: this.getNextId(),
 			ip,
@@ -42,12 +48,14 @@ export default class ListenerStats {
 			startTime: Date.now(),
 		}
 
-		const geolocation = await ipLookup(ip)
+		if (currentCount < MAX_LISTENERS_PER_IP) {
+			const geolocation = await ipLookup(ip)
 
-		if (geolocation) {
-			listener.geolocation = {
-				country: geolocation.country,
-				region: geolocation.region,
+			if (geolocation) {
+				listener.geolocation = {
+					country: geolocation.country,
+					region: geolocation.region,
+				}
 			}
 		}
 
@@ -60,6 +68,7 @@ export default class ListenerStats {
 		}
 
 		this.listeners.push(listener)
+		this.ipCounts.set(ip, currentCount + 1)
 
 		return listener.id
 	}
@@ -67,7 +76,16 @@ export default class ListenerStats {
 	public async removeListener(id: number) {
 		const index = this.listeners.findIndex(listener => listener.id === id)
 
-		if (index !== -1) this.listeners.splice(index, 1)
+		if (index !== -1) {
+			const ip = this.listeners[index].ip
+			this.listeners.splice(index, 1)
+			const count = (this.ipCounts.get(ip) ?? 1) - 1
+			if (count <= 0) {
+				this.ipCounts.delete(ip)
+			} else {
+				this.ipCounts.set(ip, count)
+			}
+		}
 	}
 
 	private getNextId(): number {
@@ -82,11 +100,32 @@ export default class ListenerStats {
 		return this.listeners
 	}
 
-	public async getListenersByReferer(): Promise<Record<string, number>> {
+	public getUniqueIpCount(): number {
+		return this.ipCounts.size
+	}
+
+	public getListenerCount(): number {
+		let count = 0
+		for (const n of this.ipCounts.values()) {
+			count += Math.min(n, MAX_LISTENERS_PER_IP)
+		}
+		return count
+	}
+
+	public getListenersByReferer(): Record<string, number> {
 		const counts: Record<string, number> = {}
 		for (const l of this.listeners) {
 			const domain = l.refererDomain ?? 'direct'
 			counts[domain] = (counts[domain] ?? 0) + 1
+		}
+		return counts
+	}
+
+	public getListenersByCountry(): Record<string, number> {
+		const counts: Record<string, number> = {}
+		for (const l of this.listeners) {
+			const country = l.geolocation?.country ?? 'Unknown'
+			counts[country] = (counts[country] ?? 0) + 1
 		}
 		return counts
 	}

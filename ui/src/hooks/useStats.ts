@@ -16,10 +16,28 @@ export type Listener = {
   streamPath: string
 }
 
+export type Interruption = {
+  start: number
+  end?: number
+}
+
+export type Uptime = {
+  startedAt: number
+  isUp: boolean
+  uptime1h: number
+  uptime24h: number
+  uptime7d: number
+  uptime30d: number
+  interruptions: Interruption[]
+}
+
 export type StatsResponse = {
   listenerCount: number
+  uniqueIpCount: number
   listenersByReferer: Record<string, number>
+  listenersByCountry: Record<string, number>
   listeners: Listener[]
+  uptime: Uptime
 }
 
 async function fetchStats(): Promise<StatsResponse> {
