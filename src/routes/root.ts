@@ -29,12 +29,20 @@ export default async function (app: FastifyInstance, { listenerStats, streamMana
 		authenticate: true,
 	}).after(() => {
 		app.get('/stats', { onRequest: app.basicAuth }, async () => {
+			const [listeners, listenerCount, uniqueIpCount, listenersByReferer, listenersByCountry] = await Promise.all([
+				listenerStats.getAllListeners(),
+				listenerStats.getListenerCount(),
+				listenerStats.getUniqueIpCount(),
+				listenerStats.getListenersByReferer(),
+				listenerStats.getListenersByCountry(),
+			])
+
 			return {
-				listenerCount: listenerStats.getListenerCount(),
-				uniqueIpCount: listenerStats.getUniqueIpCount(),
-				listenersByReferer: listenerStats.getListenersByReferer(),
-				listenersByCountry: listenerStats.getListenersByCountry(),
-				listeners: await listenerStats.getAllListeners(),
+				listenerCount,
+				uniqueIpCount,
+				listenersByReferer,
+				listenersByCountry,
+				listeners,
 				uptime: streamManager.getUptime(),
 			}
 		})

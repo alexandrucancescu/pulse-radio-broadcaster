@@ -16,9 +16,13 @@ export default function createStreamHandler(
 			reply.status(503)
 			reply.header('Retry-After', '60')
 
-			return {
-				error: 'Stream not active',
+			const accept = req.headers.accept ?? ''
+			if (accept.includes('text/html')) {
+				reply.type('text/html')
+				return '<html><body style="background:#09090b;color:#a1a1aa;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1 style="color:#fafafa;font-size:1.5rem">Stream Offline</h1><p>The stream is temporarily unavailable. Please try again later.</p></div></body></html>'
 			}
+
+			return { error: 'Stream not active' }
 		}
 
 		reply.hijack()

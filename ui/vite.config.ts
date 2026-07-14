@@ -11,6 +11,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/stats': 'http://localhost:3000',
+      '/api': 'http://localhost:3000',
+      '/listen.m3u': 'http://localhost:3000',
+      '/listen.pls': 'http://localhost:3000',
     },
   },
 })
