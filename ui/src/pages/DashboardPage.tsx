@@ -6,6 +6,7 @@ import CountryBreakdown from '../components/CountryBreakdown'
 import TopListeners from '../components/TopListeners'
 import Footer from '../components/Footer'
 import UptimePanel from '../components/UptimePanel'
+import DashboardTabs from '../components/DashboardTabs'
 
 export default function DashboardPage() {
   const { data, isLoading, error } = useStats()
@@ -19,6 +20,8 @@ export default function DashboardPage() {
             Audio Processing →
           </Link>
         </div>
+
+        <DashboardTabs active="live" />
 
         {error && (
           <div className="rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-300">

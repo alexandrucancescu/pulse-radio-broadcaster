@@ -1,6 +1,8 @@
 import ListenerStats from '../stats/ListenerStats.js'
 import { initializeRpcMethods } from './worker-rpc.js'
+import { initDb } from '../db/index.js'
 
-const listenerStats = new ListenerStats()
+const db = initDb()
+const listenerStats = new ListenerStats(db)
 
 initializeRpcMethods(listenerStats)
