@@ -1,7 +1,8 @@
 import { lookup as ipLookup } from 'fast-geoip'
 import { lookup as uaLookup } from 'useragent'
+import { eq } from 'drizzle-orm'
 import type { Db } from '../db/index.js'
-import { listenerSessions } from '../db/schema.js'
+import { listenerSessions, meta } from '../db/schema.js'
 
 const MAX_LISTENERS_PER_IP = 5
 const MIN_SESSION_DURATION_S = 30
@@ -21,19 +22,32 @@ export type Listener = {
 	}
 	startTime: number
 	streamPath: string
+	// Row id in listener_sessions once the session has been persisted
+	// (30s after connect); undefined before that
+	dbId?: number
 }
 
 export default class ListenerStats {
 	private readonly listeners: Listener[]
 	private readonly ipCounts: Map<string, number>
 	private readonly db: Db | null
+	// Pending insert timers keyed by listener id, cancelled on early disconnect.
+	// Kept outside Listener because those objects cross the worker RPC boundary
+	private readonly persistTimers: Map<number, NodeJS.Timeout>
 
 	private currentId = 0
+
+	// All-time record, tracked live on every connect and persisted to the
+	// meta table only when the record breaks. Survives restarts and the
+	// 1-year session retention
+	private peakConcurrent: { peak: number; at: string } | null = null
 
 	constructor(db?: Db) {
 		this.listeners = []
 		this.ipCounts = new Map()
 		this.db = db ?? null
+		this.persistTimers = new Map()
+		this.peakConcurrent = this.loadPeakConcurrent()
 	}
 
 	public async addListener(
@@ -75,6 +89,17 @@ export default class ListenerStats {
 		this.listeners.push(listener)
 		this.ipCounts.set(ip, currentCount + 1)
 
+		this.maybeUpdatePeak()
+
+		if (this.db) {
+			const timer = setTimeout(() => {
+				this.persistTimers.delete(listener.id)
+				this.insertSession(listener)
+			}, MIN_SESSION_DURATION_S * 1000)
+			timer.unref()
+			this.persistTimers.set(listener.id, timer)
+		}
+
 		return listener.id
 	}
 
@@ -92,29 +117,90 @@ export default class ListenerStats {
 				this.ipCounts.set(listener.ip, count)
 			}
 
-			this.persistSession(listener)
+			const timer = this.persistTimers.get(listener.id)
+			if (timer) {
+				clearTimeout(timer)
+				this.persistTimers.delete(listener.id)
+			}
+
+			this.finalizeSession(listener)
 		}
 	}
 
-	private persistSession(listener: Listener) {
+	/** INSERT the active session 30s after connect, remembering the row id */
+	private insertSession(listener: Listener) {
 		if (!this.db) return
 
-		const now = new Date()
-		const durationS = Math.round((now.getTime() - listener.startTime) / 1000)
-		if (durationS < MIN_SESSION_DURATION_S) return
-
 		try {
-			this.db.drizzle.insert(listenerSessions).values({
+			const result = this.db.drizzle.insert(listenerSessions).values({
 				ip: listener.ip,
 				country: listener.geolocation?.country ?? null,
 				referer: listener.refererDomain ?? null,
 				stream: listener.streamPath,
 				connectedAt: new Date(listener.startTime),
-				disconnectedAt: now,
-				durationS,
 			}).run()
+
+			listener.dbId = Number(result.lastInsertRowid)
 		} catch {
-			// Best-effort — don't crash the listener cleanup path
+			// Best-effort — stats must never break streaming
+		}
+	}
+
+	/** Set disconnected_at/duration on the row created by insertSession */
+	private finalizeSession(listener: Listener) {
+		if (!this.db) return
+
+		const now = new Date()
+		const durationS = Math.round((now.getTime() - listener.startTime) / 1000)
+
+		try {
+			if (listener.dbId !== undefined) {
+				this.db.drizzle.update(listenerSessions)
+					.set({ disconnectedAt: now, durationS })
+					.where(eq(listenerSessions.id, listener.dbId))
+					.run()
+			} else if (durationS >= MIN_SESSION_DURATION_S) {
+				// Disconnect raced the 30s timer — insert the complete row
+				this.db.drizzle.insert(listenerSessions).values({
+					ip: listener.ip,
+					country: listener.geolocation?.country ?? null,
+					referer: listener.refererDomain ?? null,
+					stream: listener.streamPath,
+					connectedAt: new Date(listener.startTime),
+					disconnectedAt: now,
+					durationS,
+				}).run()
+			}
+		} catch {
+			// Best-effort — stats must never break streaming
+		}
+	}
+
+	private loadPeakConcurrent(): { peak: number; at: string } | null {
+		if (!this.db) return null
+
+		try {
+			const row = this.db.drizzle.select().from(meta).where(eq(meta.key, 'peak_concurrent')).get()
+			return row ? JSON.parse(row.value) : null
+		} catch {
+			return null
+		}
+	}
+
+	private maybeUpdatePeak() {
+		const current = this.getListenerCount()
+		if (current <= (this.peakConcurrent?.peak ?? 0)) return
+
+		this.peakConcurrent = { peak: current, at: new Date().toISOString() }
+
+		if (!this.db) return
+		try {
+			this.db.drizzle.insert(meta)
+				.values({ key: 'peak_concurrent', value: JSON.stringify(this.peakConcurrent) })
+				.onConflictDoUpdate({ target: meta.key, set: { value: JSON.stringify(this.peakConcurrent) } })
+				.run()
+		} catch {
+			// Best-effort — stats must never break streaming
 		}
 	}
 
@@ -208,12 +294,14 @@ export default class ListenerStats {
 	public getTopIps(range: '24h' | '7d' | '30d') {
 		if (!this.db) return []
 		const { since } = rangeConfig(range)
+		const now = Math.floor(Date.now() / 1000)
+		// Active sessions (NULL duration) count their listening time so far
 		return this.db.sqlite.prepare(`
-			SELECT ip, SUM(duration_s) AS totalSeconds, COUNT(*) AS sessions
+			SELECT ip, SUM(COALESCE(duration_s, ? - connected_at)) AS totalSeconds, COUNT(*) AS sessions
 			FROM listener_sessions
 			WHERE connected_at >= ?
 			GROUP BY ip ORDER BY totalSeconds DESC LIMIT 20
-		`).all(since) as { ip: string; totalSeconds: number; sessions: number }[]
+		`).all(now, since) as { ip: string; totalSeconds: number; sessions: number }[]
 	}
 
 	public getSessionSummary() {
@@ -236,30 +324,8 @@ export default class ListenerStats {
 		return row
 	}
 
-	public getPeakConcurrent() {
-		if (!this.db) return null
-
-		// Find the moment with the most overlapping sessions
-		// For each session start/end, count how many sessions were active at that point
-		const row = this.db.sqlite.prepare(`
-			WITH events AS (
-				SELECT connected_at AS ts, 1 AS delta FROM listener_sessions
-				UNION ALL
-				SELECT disconnected_at AS ts, -1 AS delta FROM listener_sessions
-			),
-			running AS (
-				SELECT ts, SUM(SUM(delta)) OVER (ORDER BY ts) AS concurrent
-				FROM events
-				GROUP BY ts
-			)
-			SELECT concurrent AS peak, ts
-			FROM running
-			ORDER BY concurrent DESC
-			LIMIT 1
-		`).get() as { peak: number; ts: number } | undefined
-
-		if (!row) return null
-		return { peak: row.peak, at: new Date(row.ts * 1000).toISOString() }
+	public getPeakConcurrent(): { peak: number; at: string } | null {
+		return this.peakConcurrent
 	}
 }
 

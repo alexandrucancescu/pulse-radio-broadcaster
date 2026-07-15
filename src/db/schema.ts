@@ -9,11 +9,20 @@ export const listenerSessions = sqliteTable(
 		referer: text('referer'),
 		stream: text('stream').notNull(),
 		connectedAt: integer('connected_at', { mode: 'timestamp' }).notNull(),
-		disconnectedAt: integer('disconnected_at', { mode: 'timestamp' }).notNull(),
-		durationS: integer('duration_s').notNull(),
+		// NULL while the session is still active (row is inserted 30s after
+		// connect, finalized on disconnect or graceful shutdown)
+		disconnectedAt: integer('disconnected_at', { mode: 'timestamp' }),
+		durationS: integer('duration_s'),
 	},
 	(table) => [
 		index('idx_disconnected_at').on(table.disconnectedAt),
 		index('idx_stream_disconnected').on(table.stream, table.disconnectedAt),
 	]
 )
+
+// Generic scalar state that must survive restarts and data retention,
+// e.g. the all-time peak concurrent listeners record
+export const meta = sqliteTable('meta', {
+	key: text('key').primaryKey(),
+	value: text('value').notNull(),
+})
