@@ -42,6 +42,9 @@ const env = createEnv({
 		RTP_FORMAT: z.string().default('s16be'),
 		RTP_ALLOWED_IPS: csv,
 		RTP_NO_DATA_DISCONNECT_DELAY: z.coerce.number().int().positive().default(60),
+		// How many packets each packet waits in the reorder buffer
+		// (~320ms at ~126 packets/sec for 44.1kHz stereo 16-bit PCM)
+		RTP_REORDER_DEPTH: z.coerce.number().int().positive().default(40),
 
 		STREAMS: json(z.array(streamSchema).min(1)),
 

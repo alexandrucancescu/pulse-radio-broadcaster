@@ -8,10 +8,6 @@ import RtpReorderBuffer from './RtpReorderBuffer.js'
 import env from '../env.js'
 import { isIpEqualOrInCidr } from '../util/ip.js'
 
-// How many packets a packet waits in the reorder buffer before
-// being emitted (~320ms at ~126 packets/sec for 44.1kHz PCM).
-const REORDER_DEPTH = 40
-
 // If no packet arrived for this long, assume the source restarted
 // even if its SSRC did not change (fallback for encoders that reuse
 // their SSRC across reboots).
@@ -37,7 +33,7 @@ class RtpReceiver extends EventEmitter {
 	// SSRC of the current sender session; -1 = no packet seen yet.
 	// Real SSRCs are unsigned 32-bit, so -1 can never collide.
 	private currentSsrc: number = -1
-	private readonly reorderBuffer = new RtpReorderBuffer(REORDER_DEPTH)
+	private readonly reorderBuffer = new RtpReorderBuffer(env.RTP_REORDER_DEPTH)
 
 	constructor({ port, host = '0.0.0.0' }: ConstructorProps) {
 		super()
