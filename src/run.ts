@@ -3,6 +3,7 @@ import createApp from './app.js'
 import RtpReceiver from './rtp/RtpReceiver.js'
 import env from './env.js'
 import StreamManager from './stream/StreamManager.js'
+import DspChain from './dsp/DspChain.js'
 import type ListenerStats from './stats/ListenerStats.js'
 import { createWorkerProxy } from './workers/worker-rpc.js'
 import log from './util/log.js'
@@ -19,13 +20,19 @@ log.info(
 
 const rtpReceiver = new RtpReceiver({ port: env.RTP_PORT, host: env.RTP_HOST })
 
+const dspChain = new DspChain({ sampleRate: env.RTP_SAMPLE_RATE, channels: 2 })
+
+rtpReceiver.on('data', chunk => dspChain.write(chunk))
+
 const streamManager = new StreamManager(
-	rtpReceiver,
+	dspChain,
 	{ format: env.RTP_FORMAT, sampleRate: env.RTP_SAMPLE_RATE },
 	env.STREAMS
 )
 
 streamManager.start()
+dspChain.start()
+rtpReceiver.start()
 
 const listenerStats = createWorkerProxy<ListenerStats>(
 	resolve(import.meta.dirname, './workers/listeners-worker.js')

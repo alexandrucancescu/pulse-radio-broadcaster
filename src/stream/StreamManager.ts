@@ -1,4 +1,3 @@
-import RtpReceiver from '../rtp/RtpReceiver.js'
 import StreamMount from './StreamMount.js'
 import log from '../util/log.js'
 import env, { StreamConfig } from '../env.js'
@@ -8,12 +7,17 @@ export type Interruption = {
 	end?: number
 }
 
+// Anything that emits s16be PCM chunks (RtpReceiver, DspChain, ...)
+export type AudioSource = {
+	on(event: 'data', handler: (chunk: Buffer) => void): unknown
+}
+
 export default class StreamManager {
 	private lastReceivedDataTime: number
 	private noDataEncodersStopped: boolean
 
 	private readonly streamMounts: StreamMount[]
-	private readonly rtpReceiver: RtpReceiver
+	private readonly source: AudioSource
 	private readonly inputFormat: {
 		format: string
 		sampleRate: number
@@ -24,7 +28,7 @@ export default class StreamManager {
 	private readonly interruptions: Interruption[]
 
 	constructor(
-		rtpReceiver: RtpReceiver,
+		source: AudioSource,
 		inputFormat: {
 			format: string
 			sampleRate: number
@@ -33,7 +37,7 @@ export default class StreamManager {
 	) {
 		this.streamConfigs = streamConfigs
 		this.inputFormat = inputFormat
-		this.rtpReceiver = rtpReceiver
+		this.source = source
 		this.lastReceivedDataTime = Date.now()
 		this.noDataEncodersStopped = false
 		this.startedAt = Date.now()
@@ -93,7 +97,7 @@ export default class StreamManager {
 	public start() {
 		this.streamMounts.forEach(mount => mount.start())
 
-		this.rtpReceiver.on('data', chunk => {
+		this.source.on('data', chunk => {
 			this.lastReceivedDataTime = Date.now()
 			this.streamMounts
 				.filter(stream => stream.isActive)
@@ -102,7 +106,6 @@ export default class StreamManager {
 				})
 		})
 
-		this.rtpReceiver.start()
 		this.initDataCheck()
 	}
 

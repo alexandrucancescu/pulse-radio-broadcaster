@@ -14,7 +14,8 @@
     "build:server": "tsc",
     "build:ui": "pnpm --dir ui build",
     "start": "node dist/run.js",
-    "dev": "node --env-file=.env --watch --import=tsx/esm src/run.ts"
+    "dev": "node --env-file=.env --watch --import=tsx/esm src/run.ts",
+    "test": "vitest run"
   },
   "type": "module",
   "author": "Alexandru Cancescu",
@@ -39,7 +40,8 @@
     "@types/useragent": "^2.3.4",
     "prettier": "^3.9.5",
     "tsx": "^4.23.1",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
   },
   "keywords": [
     "broadcast",
