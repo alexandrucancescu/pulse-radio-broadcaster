@@ -6,10 +6,14 @@ import AutoLoad from '@fastify/autoload'
 import fastifyStatic from '@fastify/static'
 import createStreamHandler from './stream/StreamHandler.js'
 import type ListenerStats from './stats/ListenerStats.js'
+import type DspChain from './dsp/DspChain.js'
+import type MonitorMount from './stream/MonitorMount.js'
 
 export default function createApp(
 	streamManager: StreamManager,
-	listenerStats: ListenerStats
+	listenerStats: ListenerStats,
+	dspChain: DspChain,
+	monitorMount: MonitorMount
 ) {
 	const app = Fastify({
 		loggerInstance: log.child(
@@ -27,6 +31,8 @@ export default function createApp(
 		options: {
 			streamManager,
 			listenerStats,
+			dspChain,
+			monitorMount,
 			log,
 		},
 	})

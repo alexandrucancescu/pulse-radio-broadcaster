@@ -32,6 +32,8 @@ COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
 COPY --from=prod-deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 
+RUN mkdir -p /app/data && chown nodejs:nodejs /app/data
+
 USER nodejs
 
 EXPOSE 3000

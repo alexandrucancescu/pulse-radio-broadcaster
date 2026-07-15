@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useStats } from '../hooks/useStats'
 import ListenerTable from '../components/ListenerTable'
 import RefererBreakdown from '../components/RefererBreakdown'
@@ -12,7 +13,12 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
       <div className="mx-auto max-w-4xl space-y-6">
-        <h1 className="text-2xl font-semibold">Pulse Radio</h1>
+        <div className="flex items-baseline justify-between">
+          <h1 className="text-2xl font-semibold">Pulse Radio</h1>
+          <Link to="/dsp" className="text-sm text-blue-400 hover:underline">
+            Audio Processing →
+          </Link>
+        </div>
 
         {error && (
           <div className="rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-300">

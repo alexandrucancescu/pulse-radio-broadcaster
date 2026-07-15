@@ -4,6 +4,7 @@ import RtpReceiver from './rtp/RtpReceiver.js'
 import env from './env.js'
 import StreamManager from './stream/StreamManager.js'
 import DspChain from './dsp/DspChain.js'
+import MonitorMount from './stream/MonitorMount.js'
 import type ListenerStats from './stats/ListenerStats.js'
 import { createWorkerProxy } from './workers/worker-rpc.js'
 import log from './util/log.js'
@@ -24,6 +25,14 @@ const dspChain = new DspChain({ sampleRate: env.RTP_SAMPLE_RATE, channels: 2 })
 
 rtpReceiver.on('data', chunk => dspChain.write(chunk))
 
+const monitorMount = new MonitorMount(
+	env.RTP_SAMPLE_RATE,
+	2,
+	log.child({}, { msgPrefix: '[MONITOR] ' })
+)
+
+dspChain.on('data', chunk => monitorMount.write(chunk))
+
 const streamManager = new StreamManager(
 	dspChain,
 	{ format: env.RTP_FORMAT, sampleRate: env.RTP_SAMPLE_RATE },
@@ -38,7 +47,7 @@ const listenerStats = createWorkerProxy<ListenerStats>(
 	resolve(import.meta.dirname, './workers/listeners-worker.js')
 )
 
-await createApp(streamManager, listenerStats)
+await createApp(streamManager, listenerStats, dspChain, monitorMount)
 	.listen({
 		port: env.PORT,
 		host: env.HOST,

@@ -46,8 +46,19 @@ const SETTINGS_FILE = join(SETTINGS_DIR, 'dsp.json')
 export const DEFAULT_SETTINGS: DspSettings = {
 	eq: {
 		enabled: false,
+		// Set negative to compensate the boosts below if loud passages
+		// clip (no limiter yet while dynamics is stubbed)
 		preampDb: 0,
-		bands: [],
+		bands: [
+			// Warmth: gentle low-end foundation
+			{ type: 'lowshelf', frequency: 90, gainDb: 2.5, q: 0.7 },
+			// De-mud: the 200-400Hz region is where streams sound "boxy"
+			{ type: 'peaking', frequency: 300, gainDb: -2, q: 1 },
+			// Presence: vocal/speech intelligibility
+			{ type: 'peaking', frequency: 3000, gainDb: 1.5, q: 1 },
+			// Air: the sparkle FM processing is known for
+			{ type: 'highshelf', frequency: 9000, gainDb: 2.5, q: 0.7 },
+		],
 	},
 	dynamics: {
 		enabled: false,
