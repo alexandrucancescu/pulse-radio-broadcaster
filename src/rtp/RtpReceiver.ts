@@ -4,8 +4,18 @@ import { createSocket, Socket as DgramSocket } from 'node:dgram'
 import log from '../util/log.js'
 import { RemoteInfo } from 'node:dgram'
 import parseRtpPacket, { RtpPacket } from './rtp.js'
+import RtpReorderBuffer from './RtpReorderBuffer.js'
 import env from '../env.js'
 import { isIpEqualOrInCidr } from '../util/ip.js'
+
+// How many packets a packet waits in the reorder buffer before
+// being emitted (~320ms at ~126 packets/sec for 44.1kHz PCM).
+const REORDER_DEPTH = 40
+
+// If no packet arrived for this long, assume the source restarted
+// even if its SSRC did not change (fallback for encoders that reuse
+// their SSRC across reboots).
+const SOURCE_RESTART_MS = 1000
 
 type ConstructorProps = {
 	port: number
@@ -24,7 +34,10 @@ class RtpReceiver extends EventEmitter {
 	private isRunning: boolean = false
 	private sourceAddress: string
 	private lastPacketTime: number
-	private lastSequenceNumber: number = -1
+	// SSRC of the current sender session; -1 = no packet seen yet.
+	// Real SSRCs are unsigned 32-bit, so -1 can never collide.
+	private currentSsrc: number = -1
+	private readonly reorderBuffer = new RtpReorderBuffer(REORDER_DEPTH)
 
 	constructor({ port, host = '0.0.0.0' }: ConstructorProps) {
 		super()
@@ -71,22 +84,33 @@ class RtpReceiver extends EventEmitter {
 
 		this.logRtpMessage(remoteInfo, packet)
 
-		if (
-			this.lastSequenceNumber > packet.sequenceNumber &&
-			this.lastSequenceNumber - packet.sequenceNumber < 3000 &&
-			now - this.lastPacketTime < 1000
-		) {
-			log.debug(
-				`Drop packet PrevSeqNum(${this.lastSequenceNumber}) - SeqNum(${packet.sequenceNumber}) = Diff(${this.lastSequenceNumber - packet.sequenceNumber}); TimeDiffMs=${now - this.lastPacketTime}`
+		// A new SSRC means a new sender session: sequence numbers
+		// restarted at a random value (RFC 3550), so all previous
+		// ordering state is meaningless.
+		if (packet.ssrc !== this.currentSsrc) {
+			if (this.currentSsrc !== -1) {
+				log.info(
+					`RTP source restarted (SSRC ${this.currentSsrc} -> ${packet.ssrc})`
+				)
+			}
+
+			this.currentSsrc = packet.ssrc
+			this.reorderBuffer.reset()
+		} else if (now - this.lastPacketTime > SOURCE_RESTART_MS) {
+			// Same SSRC after a long silence: treat as a restart anyway.
+			// Whatever is buffered is the stale tail of the old stream.
+			log.info(
+				`RTP silence of ${now - this.lastPacketTime}ms, resetting reorder buffer`
 			)
 
-			return
+			this.reorderBuffer.reset()
 		}
 
 		this.lastPacketTime = now
-		this.lastSequenceNumber = packet.sequenceNumber
 
-		this.emit('data', packet.payload)
+		for (const ready of this.reorderBuffer.push(packet)) {
+			this.emit('data', ready.payload)
+		}
 	}
 
 	private logRtpMessage(remoteInfo: RemoteInfo, packet: RtpPacket) {

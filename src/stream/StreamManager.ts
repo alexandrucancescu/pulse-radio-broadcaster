@@ -54,7 +54,7 @@ export default class StreamManager {
 	}
 
 	private initDataCheck() {
-		setInterval(() => {
+		const interval = setInterval(() => {
 			const disconnectDelaySeconds = env.RTP_NO_DATA_DISCONNECT_DELAY
 
 			if (Date.now() - this.lastReceivedDataTime > disconnectDelaySeconds * 1000) {
@@ -85,6 +85,9 @@ export default class StreamManager {
 				}
 			}
 		}, 1000)
+
+		// Don't let this timer keep the process alive during shutdown
+		interval.unref()
 	}
 
 	public start() {
