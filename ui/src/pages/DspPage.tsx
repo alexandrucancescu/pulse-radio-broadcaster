@@ -44,7 +44,10 @@ export default function DspPage() {
     dynTimer.current = setTimeout(() => dynamicsMutation.mutate(next), 150)
   }
 
-  const monitorUrl = `${window.location.protocol}//user:pass@${window.location.host}/monitor.wav`
+  const token = query.data?.monitorToken
+  const monitorUrl = token
+    ? `${window.location.protocol}//${window.location.host}/monitor.wav?token=${token}`
+    : `${window.location.protocol}//${window.location.host}/monitor.wav`
 
   return (
     <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
@@ -235,8 +238,7 @@ export default function DspPage() {
               </header>
               <div className="space-y-3 p-4 text-sm text-zinc-400">
                 <p>
-                  Listen to the processed audio with low latency while tweaking (replace user:pass
-                  with your stats credentials):
+                  Listen to the processed audio with low latency while tweaking:
                 </p>
 
                 <div className="space-y-1">

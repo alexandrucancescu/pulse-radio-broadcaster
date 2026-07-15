@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify'
 import BasicAuth from '@fastify/basic-auth'
 import { z } from 'zod'
 import type DspChain from '../dsp/DspChain.js'
-import { statsAuthConfigured, validateStatsAuth } from '../util/auth.js'
+import { statsAuthConfigured, validateStatsAuth, monitorToken } from '../util/auth.js'
 import { Logger } from 'pino'
 
 type Options = {
@@ -46,7 +46,7 @@ export default async function (app: FastifyInstance, { dspChain, log }: Options)
 		authenticate: true,
 	}).after(() => {
 		app.get('/api/dsp', { onRequest: app.basicAuth }, async () => {
-			return dspChain.getSettings()
+			return { ...dspChain.getSettings(), monitorToken: monitorToken() }
 		})
 
 		app.patch('/api/dsp/eq', { onRequest: app.basicAuth }, async (req, reply) => {

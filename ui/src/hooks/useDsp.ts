@@ -28,6 +28,7 @@ export type DynamicsParams = {
 export type DspSettings = {
   eq: EqParams
   dynamics: DynamicsParams
+  monitorToken?: string
 }
 
 async function fetchDsp(): Promise<DspSettings> {
