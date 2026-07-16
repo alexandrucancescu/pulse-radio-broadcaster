@@ -42,6 +42,10 @@ const env = createEnv({
 		RTP_FORMAT: z.string().default('s16be'),
 		RTP_ALLOWED_IPS: csv,
 		RTP_NO_DATA_DISCONNECT_DELAY: z.coerce.number().int().positive().default(60),
+		// A listener whose unsent audio buffer exceeds this many seconds is
+		// kicked as stalled (dead/paused client), bounding the slow-client
+		// memory leak. Generous enough to ride out mobile network blips.
+		STREAM_MAX_BUFFER_SECONDS: z.coerce.number().int().positive().default(5 * 60),
 		// How many packets each packet waits in the reorder buffer
 		// (~320ms at ~126 packets/sec for 44.1kHz stereo 16-bit PCM)
 		RTP_REORDER_DEPTH: z.coerce.number().int().positive().default(40),

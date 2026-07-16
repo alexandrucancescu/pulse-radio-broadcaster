@@ -12,14 +12,21 @@ import { createWavStreamHeader } from '../util/wav.js'
  *
  * What comes out here is exactly what the stream encoders receive.
  */
+// Kick monitor clients buffered more than this many seconds behind —
+// raw PCM is ~176 KB/s, so a stalled client leaks memory fast, and a
+// monitor that far behind is useless for live tuning anyway
+const MAX_BUFFERED_SECONDS = 5
+
 export default class MonitorMount {
 	private readonly clients = new Set<ServerResponse>()
 	private readonly header: Buffer
 	private readonly log: Logger
+	private readonly maxBufferedBytes: number
 
 	constructor(sampleRate: number, channels: number, log: Logger) {
 		this.header = createWavStreamHeader(sampleRate, channels)
 		this.log = log
+		this.maxBufferedBytes = sampleRate * channels * 2 * MAX_BUFFERED_SECONDS
 	}
 
 	public get clientCount(): number {
@@ -49,7 +56,18 @@ export default class MonitorMount {
 		littleEndian.swap16()
 
 		this.clients.forEach(client => {
-			if (!client.closed) client.write(littleEndian)
+			if (client.closed || client.destroyed) return
+
+			if (client.writableLength > this.maxBufferedBytes) {
+				this.log.info(
+					`Kicking stalled monitor client (${client.writableLength} bytes buffered)`
+				)
+				// destroy() emits 'close', which removes it from the set
+				client.destroy()
+				return
+			}
+
+			client.write(littleEndian)
 		})
 	}
 }
