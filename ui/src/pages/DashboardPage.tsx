@@ -29,6 +29,17 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {data?.memory && (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2 text-xs text-zinc-400">
+            <span className="font-medium text-zinc-500">Memory</span>
+            {/* rss is process-wide (both threads share it); heaps are per-isolate */}
+            <MemStat label="Process RSS" bytes={data.memory.main.rss} />
+            <MemStat label="App heap" bytes={data.memory.main.heapUsed} />
+            <MemStat label="Worker heap" bytes={data.memory.worker.heapUsed} />
+            <MemStat label="Audio buffers" bytes={data.memory.main.arrayBuffers} />
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard
             label="Listeners"
@@ -149,5 +160,14 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="text-xs text-zinc-500">{label}</p>
       <p className="text-2xl font-semibold">{value}</p>
     </div>
+  )
+}
+
+function MemStat({ label, bytes }: { label: string; bytes: number }) {
+  return (
+    <span>
+      <span className="text-zinc-500">{label}</span>{' '}
+      <span className="font-mono text-zinc-300">{Math.round(bytes / 1048576)} MB</span>
+    </span>
   )
 }

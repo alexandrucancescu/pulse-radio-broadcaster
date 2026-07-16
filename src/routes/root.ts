@@ -24,13 +24,16 @@ export default async function (app: FastifyInstance, { listenerStats, streamMana
 		authenticate: true,
 	}).after(() => {
 		app.get('/stats', { onRequest: app.basicAuth }, async () => {
-			const [listeners, listenerCount, uniqueIpCount, listenersByReferer, listenersByCountry] = await Promise.all([
+			const [listeners, listenerCount, uniqueIpCount, listenersByReferer, listenersByCountry, workerMemory] = await Promise.all([
 				listenerStats.getAllListeners(),
 				listenerStats.getListenerCount(),
 				listenerStats.getUniqueIpCount(),
 				listenerStats.getListenersByReferer(),
 				listenerStats.getListenersByCountry(),
+				listenerStats.getMemoryUsage(),
 			])
+
+			const m = process.memoryUsage()
 
 			return {
 				listenerCount,
@@ -39,6 +42,16 @@ export default async function (app: FastifyInstance, { listenerStats, streamMana
 				listenersByCountry,
 				listeners,
 				uptime: streamManager.getUptime(),
+				memory: {
+					main: {
+						rss: m.rss,
+						heapUsed: m.heapUsed,
+						heapTotal: m.heapTotal,
+						external: m.external,
+						arrayBuffers: m.arrayBuffers,
+					},
+					worker: workerMemory,
+				},
 			}
 		})
 	})

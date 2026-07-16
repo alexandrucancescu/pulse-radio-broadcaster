@@ -31,6 +31,14 @@ export type Uptime = {
   interruptions: Interruption[]
 }
 
+export type MemoryUsage = {
+  rss: number
+  heapUsed: number
+  heapTotal: number
+  external: number
+  arrayBuffers: number
+}
+
 export type StatsResponse = {
   listenerCount: number
   uniqueIpCount: number
@@ -38,6 +46,10 @@ export type StatsResponse = {
   listenersByCountry: Record<string, number>
   listeners: Listener[]
   uptime: Uptime
+  memory: {
+    main: MemoryUsage
+    worker: MemoryUsage
+  }
 }
 
 async function fetchStats(): Promise<StatsResponse> {

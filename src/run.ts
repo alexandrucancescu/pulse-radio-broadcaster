@@ -10,15 +10,9 @@ import { createWorkerProxy } from './workers/worker-rpc.js'
 import { flushOpenSessions } from './db/index.js'
 import log from './util/log.js'
 
-log.info(
-	{
-		host: env.HOST,
-		port: env.PORT,
-		rtp: { host: env.RTP_HOST, port: env.RTP_PORT, format: env.RTP_FORMAT, sampleRate: env.RTP_SAMPLE_RATE },
-		streams: env.STREAMS.length,
-	},
-	'Configuration:'
-)
+// Log the full resolved configuration at startup, minus the secret
+const { STATS_PASSWORD, STREAMS, ...loggableConfig } = env
+log.info({ ...loggableConfig, streams: STREAMS.length }, 'Configuration:')
 
 const rtpReceiver = new RtpReceiver({ port: env.RTP_PORT, host: env.RTP_HOST })
 

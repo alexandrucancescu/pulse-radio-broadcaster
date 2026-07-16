@@ -7,6 +7,14 @@ import { listenerSessions, meta } from '../db/schema.js'
 const MAX_LISTENERS_PER_IP = 5
 const MIN_SESSION_DURATION_S = 30
 
+export type MemoryUsage = {
+	rss: number
+	heapUsed: number
+	heapTotal: number
+	external: number
+	arrayBuffers: number
+}
+
 export type Listener = {
 	id: number
 	ip: string
@@ -218,6 +226,18 @@ export default class ListenerStats {
 
 	public getUniqueIpCount(): number {
 		return this.ipCounts.size
+	}
+
+	// Runs inside the worker thread, so this reports the worker's own heap
+	public getMemoryUsage(): MemoryUsage {
+		const m = process.memoryUsage()
+		return {
+			rss: m.rss,
+			heapUsed: m.heapUsed,
+			heapTotal: m.heapTotal,
+			external: m.external,
+			arrayBuffers: m.arrayBuffers,
+		}
 	}
 
 	public getListenerCount(): number {
