@@ -1,5 +1,7 @@
 import { useStreams } from '../hooks/useStreams'
+import { useNowPlaying } from '../hooks/useNowPlaying'
 import Footer from '../components/Footer'
+import NowPlayingBar from '../components/NowPlayingBar'
 
 const FORMAT_LABELS: Record<string, string> = {
   mp3: 'MP3',
@@ -10,6 +12,7 @@ const FORMAT_LABELS: Record<string, string> = {
 
 export default function StreamsPage() {
   const { data, isLoading, error } = useStreams()
+  const { data: nowPlaying } = useNowPlaying()
 
   return (
     <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
@@ -22,6 +25,8 @@ export default function StreamsPage() {
           </div>
         ) : (
           <>
+            {nowPlaying?.current && <NowPlayingBar entry={nowPlaying.current} />}
+
             <div className="space-y-1">
               <h1 className="text-3xl font-bold">{data?.station.name}</h1>
               {data?.station.description && data.station.description !== 'N/A' && (

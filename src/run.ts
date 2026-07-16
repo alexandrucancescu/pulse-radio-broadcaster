@@ -8,10 +8,11 @@ import MonitorMount from './stream/MonitorMount.js'
 import type ListenerStats from './stats/ListenerStats.js'
 import { createWorkerProxy } from './workers/worker-rpc.js'
 import { flushOpenSessions } from './db/index.js'
+import NowPlayingState from './nowPlaying.js'
 import log from './util/log.js'
 
-// Log the full resolved configuration at startup, minus the secret
-const { STATS_PASSWORD, STREAMS, ...loggableConfig } = env
+// Log the full resolved configuration at startup, minus secrets
+const { STATS_PASSWORD, METADATA_TOKEN, STREAMS, ...loggableConfig } = env
 log.info({ ...loggableConfig, streams: STREAMS.length }, 'Configuration:')
 
 const rtpReceiver = new RtpReceiver({ port: env.RTP_PORT, host: env.RTP_HOST })
@@ -42,7 +43,9 @@ const listenerStats = createWorkerProxy<ListenerStats>(
 	resolve(import.meta.dirname, './workers/listeners-worker.js')
 )
 
-await createApp(streamManager, listenerStats, dspChain, monitorMount)
+const nowPlaying = new NowPlayingState()
+
+await createApp(streamManager, listenerStats, dspChain, monitorMount, nowPlaying)
 	.listen({
 		port: env.PORT,
 		host: env.HOST,

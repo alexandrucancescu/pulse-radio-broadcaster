@@ -65,6 +65,8 @@ const env = createEnv({
 
 		STATS_USERNAME: z.string().optional(),
 		STATS_PASSWORD: z.string().min(8).optional(),
+
+		METADATA_TOKEN: z.string().min(8).optional(),
 	},
 })
 

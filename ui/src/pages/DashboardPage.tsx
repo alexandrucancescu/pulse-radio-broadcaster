@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useStats } from '../hooks/useStats'
+import { useNowPlaying } from '../hooks/useNowPlaying'
 import ListenerTable from '../components/ListenerTable'
 import RefererBreakdown from '../components/RefererBreakdown'
 import CountryBreakdown from '../components/CountryBreakdown'
@@ -7,9 +8,11 @@ import TopListeners from '../components/TopListeners'
 import Footer from '../components/Footer'
 import UptimePanel from '../components/UptimePanel'
 import DashboardTabs from '../components/DashboardTabs'
+import NowPlayingBar from '../components/NowPlayingBar'
 
 export default function DashboardPage() {
   const { data, isLoading, error } = useStats()
+  const { data: nowPlaying } = useNowPlaying()
 
   return (
     <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
@@ -39,6 +42,8 @@ export default function DashboardPage() {
             <MemStat label="Audio buffers" bytes={data.memory.main.arrayBuffers} />
           </div>
         )}
+
+        {nowPlaying?.current && <NowPlayingBar entry={nowPlaying.current} />}
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard
