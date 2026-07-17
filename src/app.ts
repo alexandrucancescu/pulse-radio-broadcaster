@@ -50,7 +50,7 @@ export default function createApp(
 	})
 
 	streamManager.streams().forEach(stream => {
-		const handler = createStreamHandler(stream, listenerStats, log)
+		const handler = createStreamHandler(stream, listenerStats, nowPlaying, log)
 
 		stream.config.paths.forEach(path => app.get(path, handler))
 	})

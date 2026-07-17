@@ -11,6 +11,7 @@ export type MountConfig = {
 	burstSize?: number
 	contentType?: string
 	headers?: Record<string, string>
+	icyMetadata?: boolean
 }
 
 export type Consumer = {
@@ -34,6 +35,7 @@ function toMountConfig(stream: StreamConfig): MountConfig {
 		burstSize: stream.burstSize,
 		contentType: stream.contentType,
 		headers: stream.headers,
+		icyMetadata: stream.icyMetadata,
 	}
 }
 

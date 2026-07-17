@@ -2,15 +2,21 @@ import { RouteHandlerMethod } from 'fastify'
 import StreamMount, { Consumer } from './StreamMount.js'
 import { compileHeadersForStream } from '../util/headers.js'
 import type ListenerStats from '../stats/ListenerStats.js'
+import type NowPlaying from '../nowPlaying.js'
+import IcyInjector, { isIcyCapable } from './IcyInjector.js'
 import env from '../env.js'
 import { Logger } from 'pino'
 
 export default function createStreamHandler(
 	stream: StreamMount,
 	listenerStats: ListenerStats,
+	nowPlaying: NowPlaying,
 	log: Logger
 ): RouteHandlerMethod {
 	const compiledHeaders = compileHeadersForStream(stream.config)
+	const compiledIcyHeaders = compileHeadersForStream(stream.config, true)
+	const icyEnabled =
+		stream.config.icyMetadata ?? isIcyCapable(stream.config.encoder.format)
 	// A listener whose unsent buffer exceeds STREAM_MAX_BUFFER_SECONDS of
 	// audio has stalled (paused player, dead connection). Kick it: Node
 	// would otherwise buffer audio for it in memory without bound — the
@@ -35,7 +41,16 @@ export default function createStreamHandler(
 
 		reply.hijack()
 
-		reply.raw.writeHead(200, compiledHeaders)
+		// ICY metadata is opt-in per client and counted per connection
+		const wantsIcy = icyEnabled && req.headers['icy-metadata'] === '1'
+		const injector = wantsIcy ? new IcyInjector(env.ICY_METAINT, nowPlaying) : null
+
+		if (wantsIcy) {
+			// Prevent Node from applying chunked framing to the identity body
+			reply.raw.useChunkedEncodingByDefault = false
+		}
+
+		reply.raw.writeHead(200, wantsIcy ? compiledIcyHeaders : compiledHeaders)
 		reply.raw.flushHeaders()
 
 		const listenerIdPromise = listenerStats.addListener(
@@ -45,7 +60,11 @@ export default function createStreamHandler(
 			req.headers.referer
 		)
 
-		listenerIdPromise.then(id => log.trace(`Listener ${id} connected`))
+		listenerIdPromise.then(id =>
+			log.trace(
+				`Listener ${id} connected (icy-metadata header: ${req.headers['icy-metadata'] ?? 'none'}, injecting: ${wantsIcy})`
+			)
+		)
 
 		const consumer: Consumer = {
 			onData: (chunk: Buffer) => {
@@ -67,7 +86,11 @@ export default function createStreamHandler(
 					return
 				}
 
-				reply.raw.write(chunk)
+				if (injector) {
+					for (const piece of injector.transform(chunk)) reply.raw.write(piece)
+				} else {
+					reply.raw.write(chunk)
+				}
 			},
 			onEnd: () => {
 				if (!reply.raw.closed) {

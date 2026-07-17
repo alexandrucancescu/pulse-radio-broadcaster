@@ -12,6 +12,8 @@ const streamSchema = z.object({
 	contentType: z.string().optional(),
 	burstSize: z.number().int().min(512).optional(),
 	headers: z.record(z.string()).optional(),
+	// Override ICY metadata support (default: on for all formats except opus)
+	icyMetadata: z.boolean().optional(),
 })
 
 export type StreamConfig = z.infer<typeof streamSchema>
@@ -56,6 +58,8 @@ const env = createEnv({
 		STATION_DESCRIPTION: z.string().default('N/A'),
 		STATION_GENRE: z.string().default('N/A'),
 		STATION_PUBLIC: boolStr,
+		// Station homepage, sent as icy-url (shown as a link in players)
+		STATION_URL: z.string().url().optional(),
 
 		GLOBAL_HEADERS: json(z.record(z.string())).default(
 			'{"Access-Control-Allow-Origin":"*","Cache-Control":"no-store, no-cache, must-revalidate"}',
@@ -67,6 +71,8 @@ const env = createEnv({
 		STATS_PASSWORD: z.string().min(8).optional(),
 
 		METADATA_TOKEN: z.string().min(8).optional(),
+		// Audio bytes between ICY metadata blocks (Icecast default)
+		ICY_METAINT: z.coerce.number().int().positive().default(16000),
 	},
 })
 

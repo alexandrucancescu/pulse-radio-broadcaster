@@ -1,4 +1,6 @@
 import EventEmitter from 'node:events'
+import env from './env.js'
+import type { IcyTitleSource } from './stream/IcyInjector.js'
 
 export type Song = {
 	isSong: true
@@ -30,9 +32,10 @@ declare interface NowPlaying {
 	emit(event: 'update', entry: NowPlayingEntry): boolean
 }
 
-class NowPlaying extends EventEmitter {
+class NowPlaying extends EventEmitter implements IcyTitleSource {
 	private current: NowPlayingEntry | null = null
 	private history: NowPlayingEntry[] = []
+	private version = 0
 
 	handleUpdate(raw: string) {
 		const entry = NowPlaying.parse(raw)
@@ -43,7 +46,21 @@ class NowPlaying extends EventEmitter {
 		}
 
 		this.current = entry
+		this.version++
 		this.emit('update', entry)
+	}
+
+	// ── IcyTitleSource ───────────────────────────────────────────────
+	get icyVersion(): number {
+		return this.version
+	}
+
+	get icyTitle(): string {
+		if (!this.current) return env.STATION_NAME
+		if (this.current.isSong && this.current.artist) {
+			return `${this.current.artist} - ${this.current.title}`
+		}
+		return this.current.title
 	}
 
 	getCurrent(): NowPlayingEntry | null {
