@@ -95,7 +95,10 @@ export default class ListenerStats {
 		}
 
 		this.listeners.push(listener)
-		this.ipCounts.set(ip, currentCount + 1)
+		// Re-read instead of reusing currentCount: it was captured before the
+		// awaited geo lookup, and connects/disconnects for the same IP during
+		// that suspension would make a stale increment drift the count
+		this.ipCounts.set(ip, (this.ipCounts.get(ip) ?? 0) + 1)
 
 		this.maybeUpdatePeak()
 
