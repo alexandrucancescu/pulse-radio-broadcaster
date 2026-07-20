@@ -9,13 +9,15 @@ import type ListenerStats from './stats/ListenerStats.js'
 import type DspChain from './dsp/DspChain.js'
 import type MonitorMount from './stream/MonitorMount.js'
 import type NowPlaying from './nowPlaying.js'
+import type StreamConnections from './stream/StreamConnections.js'
 
 export default function createApp(
 	streamManager: StreamManager,
 	listenerStats: ListenerStats,
 	dspChain: DspChain,
 	monitorMount: MonitorMount,
-	nowPlaying: NowPlaying
+	nowPlaying: NowPlaying,
+	connections: StreamConnections
 ) {
 	const app = Fastify({
 		loggerInstance: log.child(
@@ -36,6 +38,7 @@ export default function createApp(
 			dspChain,
 			monitorMount,
 			nowPlaying,
+			connections,
 			log,
 		},
 	})
@@ -50,7 +53,7 @@ export default function createApp(
 	})
 
 	streamManager.streams().forEach(stream => {
-		const handler = createStreamHandler(stream, listenerStats, nowPlaying, log)
+		const handler = createStreamHandler(stream, listenerStats, nowPlaying, connections, log)
 
 		stream.config.paths.forEach(path => app.get(path, handler))
 	})

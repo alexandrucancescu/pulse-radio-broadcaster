@@ -9,6 +9,8 @@ import type ListenerStats from './stats/ListenerStats.js'
 import { createWorkerProxy } from './workers/worker-rpc.js'
 import { flushOpenSessions } from './db/index.js'
 import NowPlayingState from './nowPlaying.js'
+import StreamConnections from './stream/StreamConnections.js'
+import { startBufferBudget } from './stream/BufferBudget.js'
 import log from './util/log.js'
 
 // Log the full resolved configuration at startup, minus secrets
@@ -45,7 +47,10 @@ const listenerStats = createWorkerProxy<ListenerStats>(
 
 const nowPlaying = new NowPlayingState()
 
-await createApp(streamManager, listenerStats, dspChain, monitorMount, nowPlaying)
+const connections = new StreamConnections()
+startBufferBudget(connections, env.STREAM_TOTAL_BUFFER_MB * 1024 * 1024, log)
+
+await createApp(streamManager, listenerStats, dspChain, monitorMount, nowPlaying, connections)
 	.listen({
 		port: env.PORT,
 		host: env.HOST,

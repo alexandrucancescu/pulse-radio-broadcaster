@@ -42,7 +42,15 @@ export type MemoryUsage = {
   arrayBuffers: number
 }
 
+export type StreamBuffers = {
+  totalBytes: number
+  budgetBytes: number
+  // null when the budget is disabled (STREAM_TOTAL_BUFFER_MB=0)
+  percentOfBudget: number | null
+}
+
 export type StatsResponse = {
+  streamBuffers: StreamBuffers
   listenerCount: number
   uniqueIpCount: number
   listenersByReferer: Record<string, number>

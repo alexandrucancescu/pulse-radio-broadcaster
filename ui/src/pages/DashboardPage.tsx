@@ -40,6 +40,25 @@ export default function DashboardPage() {
             <MemStat label="App heap" bytes={data.memory.main.heapUsed} />
             <MemStat label="Worker heap" bytes={data.memory.worker.heapUsed} />
             <MemStat label="Audio buffers" bytes={data.memory.main.arrayBuffers} />
+            {data.streamBuffers && (
+              <span>
+                <span className="text-zinc-500">Listener buffers</span>{' '}
+                <span className="font-mono text-zinc-300">
+                  {(data.streamBuffers.totalBytes / 1048576).toFixed(1)} MB
+                </span>
+                {data.streamBuffers.percentOfBudget !== null && (
+                  <span
+                    className={`font-mono ${
+                      data.streamBuffers.percentOfBudget >= 80
+                        ? 'text-amber-400'
+                        : 'text-zinc-500'
+                    }`}
+                  >
+                    {' '}({data.streamBuffers.percentOfBudget}% of budget)
+                  </span>
+                )}
+              </span>
+            )}
           </div>
         )}
 

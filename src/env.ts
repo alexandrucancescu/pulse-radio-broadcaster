@@ -48,6 +48,12 @@ const env = createEnv({
 		// kicked as stalled (dead/paused client), bounding the slow-client
 		// memory leak. Generous enough to ride out mobile network blips.
 		STREAM_MAX_BUFFER_SECONDS: z.coerce.number().int().positive().default(5 * 60),
+		// Global cap on unsent audio buffered across ALL listeners; when
+		// exceeded, the most-buffered listeners are kicked first until back
+		// under. Complements the per-listener cap above — at high listener
+		// counts the individual allowance alone can sum to multiple GB.
+		// 0 disables.
+		STREAM_TOTAL_BUFFER_MB: z.coerce.number().int().min(0).default(1500),
 		// How many packets each packet waits in the reorder buffer
 		// (~320ms at ~126 packets/sec for 44.1kHz stereo 16-bit PCM)
 		RTP_REORDER_DEPTH: z.coerce.number().int().positive().default(40),

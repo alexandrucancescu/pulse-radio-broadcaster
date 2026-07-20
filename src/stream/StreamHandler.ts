@@ -4,8 +4,7 @@ import { compileHeadersForStream } from '../util/headers.js'
 import type ListenerStats from '../stats/ListenerStats.js'
 import type NowPlaying from '../nowPlaying.js'
 import IcyInjector, { isIcyCapable } from './IcyInjector.js'
-import { registerBufferGauge, unregisterBufferGauge } from './bufferRegistry.js'
-import { tryAcquireConnection, releaseConnection } from './connectionLimiter.js'
+import type StreamConnections from './StreamConnections.js'
 import env from '../env.js'
 import { Logger } from 'pino'
 
@@ -15,6 +14,7 @@ export default function createStreamHandler(
 	stream: StreamMount,
 	listenerStats: ListenerStats,
 	nowPlaying: NowPlaying,
+	connections: StreamConnections,
 	log: Logger
 ): RouteHandlerMethod {
 	const compiledHeaders = compileHeadersForStream(stream.config)
@@ -51,12 +51,22 @@ export default function createStreamHandler(
 			return { error: 'Stream not active' }
 		}
 
-		if (!tryAcquireConnection(req.ip, env.MAX_CONNECTIONS_PER_IP)) {
+		if (
+			env.MAX_CONNECTIONS_PER_IP > 0 &&
+			connections.countForIp(req.ip) >= env.MAX_CONNECTIONS_PER_IP
+		) {
 			log.info(`Rejecting connection from ${req.ip}: per-IP limit reached`)
 			reply.status(429)
 			reply.header('Retry-After', '60')
 			return { error: 'Too many connections from this IP' }
 		}
+
+		const connectionHandle = connections.add({
+			ip: req.ip,
+			streamPath: req.routeOptions.url!,
+			buffered: () => reply.raw.writableLength,
+			kick: () => reply.raw.destroy(),
+		})
 
 		reply.hijack()
 
@@ -84,9 +94,7 @@ export default function createStreamHandler(
 				`Listener ${id} connected (icy-metadata header: ${req.headers['icy-metadata'] ?? 'none'}, injecting: ${wantsIcy})`
 			)
 
-			if (env.STATS_DEBUG) {
-				registerBufferGauge(id, () => reply.raw.writableLength)
-			}
+			connectionHandle.attachListenerId(id)
 		})
 
 		// The initial burst is legitimately unsent for a brand-new, healthy
@@ -129,11 +137,10 @@ export default function createStreamHandler(
 		const replyCloseHandler = () => {
 			stream.removeConsumer(consumer)
 			reply.raw.removeAllListeners()
-			releaseConnection(req.ip)
+			connectionHandle.remove()
 
 			listenerIdPromise.then(id => {
 				log.trace(`Listener ${id} disconnected`)
-				unregisterBufferGauge(id)
 				listenerStats.removeListener(id)
 			})
 		}
