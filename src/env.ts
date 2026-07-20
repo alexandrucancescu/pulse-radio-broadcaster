@@ -69,6 +69,9 @@ const env = createEnv({
 
 		STATS_USERNAME: z.string().optional(),
 		STATS_PASSWORD: z.string().min(8).optional(),
+		// Debug instrumentation: per-listener unsent-buffer bytes in /stats
+		// (distinguishes stalled clients from draining ones). Off by default.
+		STATS_DEBUG: z.preprocess(v => v === 'true' || v === '1', z.boolean()),
 
 		METADATA_TOKEN: z.string().min(8).optional(),
 		// Audio bytes between ICY metadata blocks (Icecast default)

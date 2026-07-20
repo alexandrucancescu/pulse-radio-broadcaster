@@ -3,6 +3,8 @@ import type ListenerStats from '../stats/ListenerStats.js'
 import type StreamManager from '../stream/StreamManager.js'
 import BasicAuth from '@fastify/basic-auth'
 import { statsAuthConfigured, validateStatsAuth } from '../util/auth.js'
+import { readBufferGauge } from '../stream/bufferRegistry.js'
+import env from '../env.js'
 import { Logger } from 'pino'
 
 type Options = {
@@ -40,7 +42,9 @@ export default async function (app: FastifyInstance, { listenerStats, streamMana
 				uniqueIpCount,
 				listenersByReferer,
 				listenersByCountry,
-				listeners,
+				listeners: env.STATS_DEBUG
+					? listeners.map(l => ({ ...l, bufferedBytes: readBufferGauge(l.id) }))
+					: listeners,
 				uptime: streamManager.getUptime(),
 				memory: {
 					main: {

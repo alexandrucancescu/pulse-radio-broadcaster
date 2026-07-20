@@ -9,11 +9,20 @@ function formatDuration(ms: number) {
   return `${s}s`
 }
 
+function formatBytes(bytes: number) {
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${bytes} B`
+}
+
 export default function ListenerTable({
   listeners,
 }: {
   listeners: Listener[]
 }) {
+  // Only sent when the server runs with STATS_DEBUG
+  const showBuffered = listeners.some((l) => l.bufferedBytes !== undefined)
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
@@ -24,6 +33,9 @@ export default function ListenerTable({
             <th className="px-3 py-2 font-medium">Stream</th>
             <th className="px-3 py-2 font-medium">Client</th>
             <th className="px-3 py-2 font-medium">Listening</th>
+            {showBuffered && (
+              <th className="px-3 py-2 font-medium">Buffered</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -51,6 +63,19 @@ export default function ListenerTable({
               <td className="px-3 py-2 text-xs">
                 {formatDuration(Date.now() - l.startTime)}
               </td>
+              {showBuffered && (
+                <td
+                  className={`px-3 py-2 font-mono text-xs ${
+                    (l.bufferedBytes ?? 0) > 262144
+                      ? 'text-amber-400'
+                      : 'text-zinc-400'
+                  }`}
+                >
+                  {l.bufferedBytes !== undefined
+                    ? formatBytes(l.bufferedBytes)
+                    : '—'}
+                </td>
+              )}
             </tr>
           ))}
           {listeners.length === 0 && (

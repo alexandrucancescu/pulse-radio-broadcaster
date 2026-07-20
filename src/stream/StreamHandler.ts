@@ -4,6 +4,7 @@ import { compileHeadersForStream } from '../util/headers.js'
 import type ListenerStats from '../stats/ListenerStats.js'
 import type NowPlaying from '../nowPlaying.js'
 import IcyInjector, { isIcyCapable } from './IcyInjector.js'
+import { registerBufferGauge, unregisterBufferGauge } from './bufferRegistry.js'
 import env from '../env.js'
 import { Logger } from 'pino'
 
@@ -60,24 +61,30 @@ export default function createStreamHandler(
 			req.headers.referer
 		)
 
-		listenerIdPromise.then(id =>
+		listenerIdPromise.then(id => {
 			log.trace(
 				`Listener ${id} connected (icy-metadata header: ${req.headers['icy-metadata'] ?? 'none'}, injecting: ${wantsIcy})`
 			)
-		)
+
+			if (env.STATS_DEBUG) {
+				registerBufferGauge(id, () => reply.raw.writableLength)
+			}
+		})
+
+		// The initial burst is legitimately unsent for a brand-new, healthy
+		// client, so it gets an allowance on top of the stall threshold —
+		// otherwise a small STREAM_MAX_BUFFER_SECONDS insta-kicks everyone
+		const maxBuffered = maxBufferedBytes + stream.burstBuffer.length
 
 		const consumer: Consumer = {
 			onData: (chunk: Buffer) => {
 				if (reply.raw.destroyed) return
 
-				// Unsent audio piles up in two places when a client stops
-				// reading: the response's own queue and the underlying
-				// socket's queue. Count both so we catch the stall wherever
-				// it lands.
-				const buffered =
-					reply.raw.writableLength + (reply.raw.socket?.writableLength ?? 0)
+				// NB: response.writableLength already includes the underlying
+				// socket's queue — adding socket.writableLength would double-count
+				const buffered = reply.raw.writableLength
 
-				if (buffered > maxBufferedBytes) {
+				if (buffered > maxBuffered) {
 					log.info(
 						`Kicking stalled listener on ${req.routeOptions.url} (${buffered} bytes buffered)`
 					)
@@ -107,6 +114,7 @@ export default function createStreamHandler(
 
 			listenerIdPromise.then(id => {
 				log.trace(`Listener ${id} disconnected`)
+				unregisterBufferGauge(id)
 				listenerStats.removeListener(id)
 			})
 		}

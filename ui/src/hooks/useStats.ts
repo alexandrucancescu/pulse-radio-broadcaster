@@ -14,6 +14,9 @@ export type Listener = {
   }
   startTime: number
   streamPath: string
+  // Unsent bytes queued for this listener; only present when the server
+  // runs with STATS_DEBUG. ~0 = draining fine, climbing = stalled client
+  bufferedBytes?: number
 }
 
 export type Interruption = {
