@@ -5,8 +5,11 @@ import type ListenerStats from '../stats/ListenerStats.js'
 import type NowPlaying from '../nowPlaying.js'
 import IcyInjector, { isIcyCapable } from './IcyInjector.js'
 import { registerBufferGauge, unregisterBufferGauge } from './bufferRegistry.js'
+import { tryAcquireConnection, releaseConnection } from './connectionLimiter.js'
 import env from '../env.js'
 import { Logger } from 'pino'
+
+const blockedAgents = (env.BLOCKED_USER_AGENTS ?? []).map(ua => ua.toLowerCase())
 
 export default function createStreamHandler(
 	stream: StreamMount,
@@ -27,6 +30,14 @@ export default function createStreamHandler(
 	const maxBufferedBytes = stream.encoder.bitRateBytes * env.STREAM_MAX_BUFFER_SECONDS
 
 	return async (req, reply) => {
+		if (blockedAgents.length > 0) {
+			const ua = (req.headers['user-agent'] ?? '').toLowerCase()
+			if (blockedAgents.some(blocked => ua.includes(blocked))) {
+				reply.status(403)
+				return { error: 'Forbidden' }
+			}
+		}
+
 		if (!stream.isActive) {
 			reply.status(503)
 			reply.header('Retry-After', '60')
@@ -38,6 +49,13 @@ export default function createStreamHandler(
 			}
 
 			return { error: 'Stream not active' }
+		}
+
+		if (!tryAcquireConnection(req.ip, env.MAX_CONNECTIONS_PER_IP)) {
+			log.info(`Rejecting connection from ${req.ip}: per-IP limit reached`)
+			reply.status(429)
+			reply.header('Retry-After', '60')
+			return { error: 'Too many connections from this IP' }
 		}
 
 		reply.hijack()
@@ -111,6 +129,7 @@ export default function createStreamHandler(
 		const replyCloseHandler = () => {
 			stream.removeConsumer(consumer)
 			reply.raw.removeAllListeners()
+			releaseConnection(req.ip)
 
 			listenerIdPromise.then(id => {
 				log.trace(`Listener ${id} disconnected`)

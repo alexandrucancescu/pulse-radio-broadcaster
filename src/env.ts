@@ -54,6 +54,14 @@ const env = createEnv({
 
 		STREAMS: json(z.array(streamSchema).min(1)),
 
+		// Hard cap on concurrent stream connections per IP, rejected with 429
+		// before they become listeners. Generous enough for NAT/CGNAT groups
+		// and multi-connection clients (iOS opens 2). 0 disables.
+		MAX_CONNECTIONS_PER_IP: z.coerce.number().int().min(0).default(10),
+		// Case-insensitive UA substrings rejected with 403. Ships empty —
+		// add entries when abuse shows up in the dashboard.
+		BLOCKED_USER_AGENTS: csv.optional(),
+
 		STATION_NAME: z.string().default('Radio Station'),
 		STATION_DESCRIPTION: z.string().default('N/A'),
 		STATION_GENRE: z.string().default('N/A'),

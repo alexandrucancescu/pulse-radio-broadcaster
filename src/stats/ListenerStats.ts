@@ -4,8 +4,9 @@ import { eq } from 'drizzle-orm'
 import type { Db } from '../db/index.js'
 import { listenerSessions, meta } from '../db/schema.js'
 
-const MAX_LISTENERS_PER_IP = 5
 const MIN_SESSION_DURATION_S = 30
+// Bound the per-IP geolocation cache; evicts oldest entries beyond this
+const GEO_CACHE_MAX = 1000
 
 export type MemoryUsage = {
 	rss: number
@@ -38,6 +39,9 @@ export type Listener = {
 export default class ListenerStats {
 	private readonly listeners: Listener[]
 	private readonly ipCounts: Map<string, number>
+	// One geo lookup per IP: repeated connects (NAT groups, directory
+	// probers) reuse the cached result instead of re-reading the geo db
+	private readonly geoCache: Map<string, Listener['geolocation'] | null>
 	private readonly db: Db | null
 	// Pending insert timers keyed by listener id, cancelled on early disconnect.
 	// Kept outside Listener because those objects cross the worker RPC boundary
@@ -53,6 +57,7 @@ export default class ListenerStats {
 	constructor(db?: Db) {
 		this.listeners = []
 		this.ipCounts = new Map()
+		this.geoCache = new Map()
 		this.db = db ?? null
 		this.persistTimers = new Map()
 		this.peakConcurrent = this.loadPeakConcurrent()
@@ -64,8 +69,6 @@ export default class ListenerStats {
 		userAgent?: string,
 		referer?: string
 	): Promise<number> {
-		const currentCount = this.ipCounts.get(ip) ?? 0
-
 		const listener: Listener = {
 			id: this.getNextId(),
 			ip,
@@ -75,16 +78,8 @@ export default class ListenerStats {
 			startTime: Date.now(),
 		}
 
-		if (currentCount < MAX_LISTENERS_PER_IP) {
-			const geolocation = await ipLookup(ip)
-
-			if (geolocation) {
-				listener.geolocation = {
-					country: geolocation.country,
-					region: geolocation.region,
-				}
-			}
-		}
+		const geolocation = await this.lookupGeo(ip)
+		if (geolocation) listener.geolocation = geolocation
 
 		if (userAgent) {
 			const parsedUa = uaLookup(userAgent)
@@ -136,6 +131,24 @@ export default class ListenerStats {
 
 			this.finalizeSession(listener)
 		}
+	}
+
+	private async lookupGeo(ip: string): Promise<Listener['geolocation'] | null> {
+		if (this.geoCache.has(ip)) return this.geoCache.get(ip) ?? null
+
+		const result = await ipLookup(ip)
+		const geolocation = result
+			? { country: result.country, region: result.region }
+			: null
+
+		if (this.geoCache.size >= GEO_CACHE_MAX) {
+			// Maps iterate in insertion order — drop the oldest entry
+			const oldest = this.geoCache.keys().next().value
+			if (oldest !== undefined) this.geoCache.delete(oldest)
+		}
+		this.geoCache.set(ip, geolocation)
+
+		return geolocation
 	}
 
 	/** INSERT the active session 30s after connect, remembering the row id */
@@ -244,11 +257,9 @@ export default class ListenerStats {
 	}
 
 	public getListenerCount(): number {
-		let count = 0
-		for (const n of this.ipCounts.values()) {
-			count += Math.min(n, MAX_LISTENERS_PER_IP)
-		}
-		return count
+		// No per-IP capping here: MAX_CONNECTIONS_PER_IP is enforced at
+		// connect time, so every tracked listener is a real connection
+		return this.listeners.length
 	}
 
 	public getListenersByReferer(): Record<string, number> {

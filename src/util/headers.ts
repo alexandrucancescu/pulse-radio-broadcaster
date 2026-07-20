@@ -17,6 +17,8 @@ const defaultStreamHeaders = {
 	Connection: 'keep-alive',
 	Pragma: 'no-cache',
 	Expires: 'Wed, 19 Dec 1980 02:47:29 GMT',
+	// A live stream is not seekable; stops clients attempting ranged requests
+	'Accept-Ranges': 'none',
 }
 
 export function compileHeadersForStream(streamConfig: MountConfig, icy = false) {

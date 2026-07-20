@@ -9,7 +9,7 @@ export default pino({
 	transport: {
 				target: 'pino-pretty',
 				options: {
-					translateTime: 'HH:MM:ss Z',
+					translateTime: 'dd-mm HH:MM:ss Z',
 					ignore: 'pid,hostname',
 				},
 			},

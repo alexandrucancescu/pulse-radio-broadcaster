@@ -25,6 +25,25 @@ export default async function (app: FastifyInstance, { streamManager }: Options)
 		}
 	})
 
+	app.get('/robots.txt', async (_, reply) => {
+		// Streams and data endpoints are pointless to crawl and well-behaved
+		// bots (incl. AI crawlers) respect this. Everything else — the index
+		// and dashboard UI — stays crawlable by default.
+		const streamPaths = streamManager.streams().flatMap(s => s.config.paths)
+		const lines = [
+			'User-agent: *',
+			...streamPaths.map(p => `Disallow: ${p}`),
+			'Disallow: /api/',
+			'Disallow: /stats',
+			'Disallow: /monitor.wav',
+			'Disallow: /listen.m3u',
+			'Disallow: /listen.pls',
+		]
+
+		reply.header('Content-Type', 'text/plain')
+		return lines.join('\n') + '\n'
+	})
+
 	app.get('/listen.m3u', async (req, reply) => {
 		const host = req.hostname
 		const proto = req.protocol
