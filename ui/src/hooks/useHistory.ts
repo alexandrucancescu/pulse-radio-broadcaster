@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { authFetch } from '../lib/auth'
 
 export type Range = '24h' | '7d' | '30d'
 
@@ -14,7 +15,7 @@ export type HistoryData = {
 }
 
 async function fetchHistory(range: Range): Promise<HistoryData> {
-  const res = await fetch(`/api/history?range=${range}`)
+  const res = await authFetch(`/api/history?range=${range}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

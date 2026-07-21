@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { authFetch } from '../lib/auth'
 
 export type Listener = {
   id: number
@@ -27,6 +28,8 @@ export type Interruption = {
 export type Uptime = {
   startedAt: number
   isUp: boolean
+  // Which source is on air: 'rtp' | 'autodj' | 'silence' | null
+  onAir: string | null
   uptime1h: number
   uptime24h: number
   uptime7d: number
@@ -64,7 +67,7 @@ export type StatsResponse = {
 }
 
 async function fetchStats(): Promise<StatsResponse> {
-  const res = await fetch('/stats')
+  const res = await authFetch('/stats')
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

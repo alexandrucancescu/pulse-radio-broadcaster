@@ -1,6 +1,7 @@
 import env from '../env.js'
-import type { MountConfig } from '../stream/StreamMount.js'
-import AudioFormat from '../encoders/AudioFormat.js'
+import { config } from '../config/ConfigStore.js'
+import type { MountConfig } from '../outputs/icecast/IcecastOutput.js'
+import AudioFormat from '../outputs/encoders/AudioFormat.js'
 
 const formatEncodingTypeMap: Record<AudioFormat, string> = {
 	[AudioFormat.MP3]: 'audio/mpeg',
@@ -23,16 +24,17 @@ const defaultStreamHeaders = {
 
 export function compileHeadersForStream(streamConfig: MountConfig, icy = false) {
 	const enc = streamConfig.encoder
+	const station = config().station
 
 	const icyStationHeaders: Record<string, string> = {
-		'Icy-Genre': env.STATION_GENRE,
-		'Icy-Name': env.STATION_NAME,
-		'Icy-Description': env.STATION_DESCRIPTION,
-		'Icy-Pub': env.STATION_PUBLIC ? '1' : '0',
+		'Icy-Genre': station.genre,
+		'Icy-Name': station.name,
+		'Icy-Description': station.description,
+		'Icy-Pub': station.public ? '1' : '0',
 	}
 	// Omit rather than lie when the bitrate isn't configured (e.g. VBR)
 	if (enc.bitrate) icyStationHeaders['Icy-Br'] = String(enc.bitrate)
-	if (env.STATION_URL) icyStationHeaders['Icy-Url'] = env.STATION_URL
+	if (station.url) icyStationHeaders['Icy-Url'] = station.url
 
 	const audioInfo = [
 		enc.sampleRate && `ice-samplerate=${enc.sampleRate}`,
@@ -58,9 +60,10 @@ export function compileHeadersForStream(streamConfig: MountConfig, icy = false) 
 		// Icecast never chunk-frames stream bodies — ICY clients may count
 		// metaint offsets on the raw stream, so chunked framing would
 		// misalign every metadata strip. Identity body, close on end.
+		// NB: icy-metaint itself is added per-request by the StreamHandler
+		// so it can never drift from the injector's live config value.
 		delete headers['transfer-encoding']
 		headers['connection'] = 'close'
-		headers['icy-metaint'] = String(env.ICY_METAINT)
 	}
 
 	return headers

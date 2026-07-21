@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   useDsp,
   type DynamicsParams,
@@ -7,7 +6,6 @@ import {
   type EqBand,
   type EqParams,
 } from '../hooks/useDsp'
-import Footer from '../components/Footer'
 
 const PRESETS: DynamicsPreset[] = ['clean', 'warm', 'punchy', 'loud']
 
@@ -16,18 +14,33 @@ const freqToSlider = (f: number) => Math.round((Math.log(f / 20) / Math.log(1000
 const sliderToFreq = (v: number) => Math.round(20 * Math.pow(1000, v / 1000))
 
 export default function DspPage() {
-  const { query, eqMutation, dynamicsMutation } = useDsp()
+  const { query, eqMutation, dynamicsMutation, commitMutation, resetMutation } = useDsp()
 
   const [eq, setEq] = useState<EqParams | null>(null)
   const [dynamics, setDynamics] = useState<DynamicsParams | null>(null)
 
-  // Initialize local state once from the server
+  // Initialize local state once from the server's PREVIEW settings
   useEffect(() => {
     if (query.data && !eq && !dynamics) {
-      setEq(query.data.eq)
-      setDynamics(query.data.dynamics)
+      setEq(query.data.preview.eq)
+      setDynamics(query.data.preview.dynamics)
     }
   }, [query.data, eq, dynamics])
+
+  // Preview differs from what's on air → offer commit/discard
+  const dirty =
+    !!query.data &&
+    !!eq &&
+    !!dynamics &&
+    JSON.stringify({ eq, dynamics }) !== JSON.stringify(query.data.live)
+
+  const commit = () => commitMutation.mutate()
+
+  const reset = () =>
+    resetMutation.mutateAsync().then((data) => {
+      setEq(data.preview.eq)
+      setDynamics(data.preview.dynamics)
+    })
 
   // Debounce PATCHes so slider drags don't flood the server
   const eqTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -50,14 +63,37 @@ export default function DspPage() {
     : `${window.location.protocol}//${window.location.host}/monitor.wav`
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex items-baseline justify-between">
+    <div className="space-y-6">
+        <div>
           <h1 className="text-2xl font-semibold">Audio Processing</h1>
-          <Link to="/dashboard" className="text-sm text-blue-400 hover:underline">
-            ← Dashboard
-          </Link>
+          <p className="mt-1 text-sm text-zinc-500">
+            Changes apply to the monitor preview only — commit to put them on air.
+          </p>
         </div>
+
+        {dirty && (
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-900/50 bg-amber-950/40 px-4 py-3">
+            <p className="text-sm text-amber-300">
+              Preview differs from the live chain. Listen on the monitor, then commit.
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <button
+                onClick={reset}
+                disabled={resetMutation.isPending}
+                className="rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1 text-sm text-zinc-300 hover:bg-zinc-700 disabled:opacity-50"
+              >
+                Discard
+              </button>
+              <button
+                onClick={commit}
+                disabled={commitMutation.isPending}
+                className="rounded-md bg-amber-600 px-3 py-1 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+              >
+                {commitMutation.isPending ? 'Committing…' : 'Commit to live'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {query.error && (
           <div className="rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-300">
@@ -79,7 +115,7 @@ export default function DspPage() {
             <section className="rounded-lg border border-zinc-800 bg-zinc-900">
               <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
                 <h2 className="text-sm font-medium text-zinc-400">
-                  Equalizer <span className="text-xs text-zinc-600">(live, no interruption)</span>
+                  Equalizer <span className="text-xs text-zinc-600">(previewed on monitor)</span>
                 </h2>
                 <Toggle
                   checked={eq.enabled}
@@ -277,9 +313,6 @@ export default function DspPage() {
             </section>
           </>
         )}
-
-        <Footer />
-      </div>
     </div>
   )
 }

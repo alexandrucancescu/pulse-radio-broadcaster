@@ -1,12 +1,9 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 import { useHistory, type Range } from '../hooks/useHistory'
-import Footer from '../components/Footer'
-import DashboardTabs from '../components/DashboardTabs'
 
 const RANGES: { value: Range; label: string }[] = [
   { value: '24h', label: '24 Hours' },
@@ -34,16 +31,8 @@ export default function HistoryPage() {
   const { data, isLoading, error } = useHistory(range)
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="flex items-baseline justify-between">
-          <h1 className="text-2xl font-semibold">Pulse Radio</h1>
-          <Link to="/dsp" className="text-sm text-blue-400 hover:underline">
-            Audio Processing →
-          </Link>
-        </div>
-
-        <DashboardTabs active="history" />
+    <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">Listener History</h1>
 
         {error && (
           <div className="rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-300">
@@ -170,8 +159,6 @@ export default function HistoryPage() {
           </>
         )}
 
-        <Footer />
-      </div>
     </div>
   )
 }

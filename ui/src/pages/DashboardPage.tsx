@@ -1,13 +1,10 @@
-import { Link } from 'react-router-dom'
 import { useStats } from '../hooks/useStats'
 import { useNowPlaying } from '../hooks/useNowPlaying'
 import ListenerTable from '../components/ListenerTable'
 import RefererBreakdown from '../components/RefererBreakdown'
 import CountryBreakdown from '../components/CountryBreakdown'
 import TopListeners from '../components/TopListeners'
-import Footer from '../components/Footer'
 import UptimePanel from '../components/UptimePanel'
-import DashboardTabs from '../components/DashboardTabs'
 import NowPlayingBar from '../components/NowPlayingBar'
 
 export default function DashboardPage() {
@@ -15,16 +12,11 @@ export default function DashboardPage() {
   const { data: nowPlaying } = useNowPlaying()
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <div className="flex items-baseline justify-between">
-          <h1 className="text-2xl font-semibold">Pulse Radio</h1>
-          <Link to="/dsp" className="text-sm text-blue-400 hover:underline">
-            Audio Processing →
-          </Link>
+    <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">Live Dashboard</h1>
+          {data?.uptime && <OnAirBadge source={data.uptime.onAir} />}
         </div>
-
-        <DashboardTabs active="live" />
 
         {error && (
           <div className="rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-300">
@@ -172,9 +164,32 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <Footer />
-      </div>
     </div>
+  )
+}
+
+const SOURCE_BADGES: Record<string, { label: string; classes: string }> = {
+  rtp: { label: 'Studio (RTP)', classes: 'border-emerald-800 bg-emerald-950/50 text-emerald-400' },
+  autodj: { label: 'AutoDJ', classes: 'border-amber-800 bg-amber-950/50 text-amber-400' },
+  silence: { label: 'Silence', classes: 'border-red-800 bg-red-950/50 text-red-400' },
+}
+
+function OnAirBadge({ source }: { source: string | null }) {
+  const badge = (source ? SOURCE_BADGES[source] : undefined) ?? {
+    label: source ?? 'Off air',
+    classes: 'border-red-800 bg-red-950/50 text-red-400',
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium ${badge.classes}`}
+    >
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-current" />
+      </span>
+      On air: {badge.label}
+    </span>
   )
 }
 

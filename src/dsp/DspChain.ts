@@ -1,13 +1,7 @@
 import EventEmitter from 'node:events'
 import NodeEq from './NodeEq.js'
 import DynamicsProcessor from './DynamicsProcessor.js'
-import {
-	DspSettings,
-	DynamicsParams,
-	EqParams,
-	loadSettings,
-	saveSettings,
-} from './settings.js'
+import { DspSettings, DynamicsParams, EqParams } from './settings.js'
 import log from '../util/log.js'
 
 declare interface DspChain extends EventEmitter {
@@ -27,11 +21,19 @@ class DspChain extends EventEmitter {
 	private readonly eq: NodeEq
 	private readonly dynamics: DynamicsProcessor
 	private settings: DspSettings
+	// Persists committed settings (config store). The preview chain passes
+	// nothing — its state is runtime-only until committed to the live chain.
+	private readonly persist?: (settings: DspSettings) => void
 
-	constructor(inputFormat: { sampleRate: number; channels: number }) {
+	constructor(
+		inputFormat: { sampleRate: number; channels: number },
+		settings: DspSettings,
+		persist?: (settings: DspSettings) => void
+	) {
 		super()
 
-		this.settings = loadSettings()
+		this.settings = structuredClone(settings)
+		this.persist = persist
 
 		this.eq = new NodeEq(inputFormat.sampleRate, inputFormat.channels)
 		this.eq.setParams(this.settings.eq)
@@ -64,7 +66,7 @@ class DspChain extends EventEmitter {
 		}
 
 		this.eq.setParams(this.settings.eq)
-		saveSettings(this.settings)
+		this.persist?.(this.settings)
 
 		return this.settings
 	}
@@ -76,7 +78,18 @@ class DspChain extends EventEmitter {
 		}
 
 		this.dynamics.setParams(this.settings.dynamics)
-		saveSettings(this.settings)
+		this.persist?.(this.settings)
+
+		return this.settings
+	}
+
+	/** Replace all settings at once (preview→live commit, live→preview reset) */
+	public setSettings(settings: DspSettings): DspSettings {
+		this.settings = structuredClone(settings)
+
+		this.eq.setParams(this.settings.eq)
+		this.dynamics.setParams(this.settings.dynamics)
+		this.persist?.(this.settings)
 
 		return this.settings
 	}

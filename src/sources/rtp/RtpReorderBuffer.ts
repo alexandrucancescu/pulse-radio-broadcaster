@@ -1,5 +1,5 @@
 import { RtpPacket } from './rtp.js'
-import log from '../util/log.js'
+import log from '../../util/log.js'
 
 // ── Sequence number math (RFC 3550) ──────────────────────────────
 // RTP sequence numbers are unsigned 16-bit: after 65535 comes 0.

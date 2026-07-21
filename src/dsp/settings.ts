@@ -1,6 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import log from '../util/log.js'
+// DSP parameter types and defaults. Persistence lives in the config
+// store (dsp section) — a legacy data/dsp.json is absorbed on first boot.
 
 export type EqBandType = 'peaking' | 'lowshelf' | 'highshelf'
 
@@ -39,10 +38,6 @@ export type DspSettings = {
 	dynamics: DynamicsParams
 }
 
-// Settings live in ./data so a Docker volume can be mounted at /app/data
-const SETTINGS_DIR = resolve(process.cwd(), 'data')
-const SETTINGS_FILE = join(SETTINGS_DIR, 'dsp.json')
-
 export const DEFAULT_SETTINGS: DspSettings = {
 	eq: {
 		enabled: false,
@@ -69,27 +64,3 @@ export const DEFAULT_SETTINGS: DspSettings = {
 	},
 }
 
-export function loadSettings(): DspSettings {
-	if (!existsSync(SETTINGS_FILE)) {
-		return structuredClone(DEFAULT_SETTINGS)
-	}
-
-	try {
-		const parsed = JSON.parse(readFileSync(SETTINGS_FILE, 'utf-8'))
-
-		// Merge section-wise so settings files written by older versions
-		// pick up defaults for fields they don't have yet
-		return {
-			eq: { ...DEFAULT_SETTINGS.eq, ...parsed.eq },
-			dynamics: { ...DEFAULT_SETTINGS.dynamics, ...parsed.dynamics },
-		}
-	} catch (error) {
-		log.error(error, `Failed to read ${SETTINGS_FILE}, using default DSP settings`)
-		return structuredClone(DEFAULT_SETTINGS)
-	}
-}
-
-export function saveSettings(settings: DspSettings) {
-	mkdirSync(SETTINGS_DIR, { recursive: true })
-	writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, '\t'))
-}

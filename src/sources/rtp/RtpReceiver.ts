@@ -1,12 +1,12 @@
 import * as process from 'node:process'
 import EventEmitter from 'node:events'
 import { createSocket, Socket as DgramSocket } from 'node:dgram'
-import log from '../util/log.js'
+import log from '../../util/log.js'
 import { RemoteInfo } from 'node:dgram'
 import parseRtpPacket, { RtpPacket } from './rtp.js'
 import RtpReorderBuffer from './RtpReorderBuffer.js'
-import env from '../env.js'
-import { isIpEqualOrInCidr } from '../util/ip.js'
+import { config } from '../../config/ConfigStore.js'
+import { isIpEqualOrInCidr } from '../../util/ip.js'
 
 // If no packet arrived for this long, assume the source restarted
 // even if its SSRC did not change (fallback for encoders that reuse
@@ -33,7 +33,7 @@ class RtpReceiver extends EventEmitter {
 	// SSRC of the current sender session; -1 = no packet seen yet.
 	// Real SSRCs are unsigned 32-bit, so -1 can never collide.
 	private currentSsrc: number = -1
-	private readonly reorderBuffer = new RtpReorderBuffer(env.RTP_REORDER_DEPTH)
+	private readonly reorderBuffer = new RtpReorderBuffer(config().inputs.rtp.reorderDepth)
 
 	constructor({ port, host = '0.0.0.0' }: ConstructorProps) {
 		super()
@@ -149,7 +149,7 @@ class RtpReceiver extends EventEmitter {
 }
 
 function isIpAllowed(queriedIp: string) {
-	return env.RTP_ALLOWED_IPS.some(allowed => isIpEqualOrInCidr(queriedIp, allowed))
+	return config().inputs.rtp.allowedIps.some(allowed => isIpEqualOrInCidr(queriedIp, allowed))
 }
 
 export default RtpReceiver

@@ -1,6 +1,6 @@
 import EventEmitter from 'node:events'
 import env from './env.js'
-import type { IcyTitleSource } from './stream/IcyInjector.js'
+import type { IcyTitleSource } from './outputs/icecast/IcyInjector.js'
 
 export type Song = {
 	isSong: true

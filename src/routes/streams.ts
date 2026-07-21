@@ -1,20 +1,20 @@
 import { FastifyInstance } from 'fastify'
-import type StreamManager from '../stream/StreamManager.js'
-import env from '../env.js'
+import type OutputManager from '../outputs/OutputManager.js'
+import { config } from '../config/ConfigStore.js'
 
 type Options = {
-	streamManager: StreamManager
+	outputManager: OutputManager
 }
 
-export default async function (app: FastifyInstance, { streamManager }: Options) {
+export default async function (app: FastifyInstance, { outputManager }: Options) {
 	app.get('/api/streams', async () => {
 		return {
 			station: {
-				name: env.STATION_NAME,
-				description: env.STATION_DESCRIPTION,
-				genre: env.STATION_GENRE,
+				name: config().station.name,
+				description: config().station.description,
+				genre: config().station.genre,
 			},
-			streams: streamManager.streams().map(s => ({
+			streams: outputManager.icecast().map(s => ({
 				paths: s.config.paths,
 				format: s.config.encoder.format,
 				bitrate: s.config.encoder.bitrate,
@@ -29,7 +29,7 @@ export default async function (app: FastifyInstance, { streamManager }: Options)
 		// Streams and data endpoints are pointless to crawl and well-behaved
 		// bots (incl. AI crawlers) respect this. Everything else — the index
 		// and dashboard UI — stays crawlable by default.
-		const streamPaths = streamManager.streams().flatMap(s => s.config.paths)
+		const streamPaths = outputManager.icecast().flatMap(s => s.config.paths)
 		const lines = [
 			'User-agent: *',
 			...streamPaths.map(p => `Disallow: ${p}`),
@@ -47,7 +47,7 @@ export default async function (app: FastifyInstance, { streamManager }: Options)
 	app.get('/listen.m3u', async (req, reply) => {
 		const host = req.hostname
 		const proto = req.protocol
-		const mp3 = streamManager.streams().find(s => s.config.encoder.format === 'mp3')
+		const mp3 = outputManager.icecast().find(s => s.config.encoder.format === 'mp3')
 
 		if (!mp3) {
 			reply.status(404)
@@ -57,19 +57,19 @@ export default async function (app: FastifyInstance, { streamManager }: Options)
 		const path = mp3.config.paths.find(p => p.endsWith('.mp3')) ?? mp3.config.paths[0]
 		const lines = [
 			'#EXTM3U',
-			`#EXTINF:-1,${env.STATION_NAME}`,
+			`#EXTINF:-1,${config().station.name}`,
 			`${proto}://${host}${path}`,
 		]
 
 		reply.header('Content-Type', 'audio/x-mpegurl')
-		reply.header('Content-Disposition', `attachment; filename="${env.STATION_NAME}.m3u"`)
+		reply.header('Content-Disposition', `attachment; filename="${config().station.name}.m3u"`)
 		return lines.join('\n') + '\n'
 	})
 
 	app.get('/listen.pls', async (req, reply) => {
 		const host = req.hostname
 		const proto = req.protocol
-		const streams = streamManager.streams()
+		const streams = outputManager.icecast()
 		const lines = ['[playlist]', '']
 
 		streams.forEach((s, i) => {
@@ -78,7 +78,7 @@ export default async function (app: FastifyInstance, { streamManager }: Options)
 			const format = s.config.encoder.format
 			const bitrate = s.config.encoder.bitrate ?? ''
 			lines.push(`File${n}=${proto}://${host}${path}`)
-			lines.push(`Title${n}=${env.STATION_NAME} (${format} ${bitrate}kbps)`)
+			lines.push(`Title${n}=${config().station.name} (${format} ${bitrate}kbps)`)
 			lines.push(`Length${n}=-1`)
 			lines.push('')
 		})
@@ -87,7 +87,7 @@ export default async function (app: FastifyInstance, { streamManager }: Options)
 		lines.push('Version=2')
 
 		reply.header('Content-Type', 'audio/x-scpls')
-		reply.header('Content-Disposition', `attachment; filename="${env.STATION_NAME}.pls"`)
+		reply.header('Content-Disposition', `attachment; filename="${config().station.name}.pls"`)
 		return lines.join('\n') + '\n'
 	})
 }

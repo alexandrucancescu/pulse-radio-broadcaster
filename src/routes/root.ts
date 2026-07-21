@@ -1,20 +1,20 @@
 import { FastifyInstance } from 'fastify'
 import type ListenerStats from '../stats/ListenerStats.js'
-import type StreamManager from '../stream/StreamManager.js'
+import type SourceManager from '../sources/SourceManager.js'
 import BasicAuth from '@fastify/basic-auth'
 import { statsAuthConfigured, validateStatsAuth } from '../util/auth.js'
-import type StreamConnections from '../stream/StreamConnections.js'
-import env from '../env.js'
+import type StreamConnections from '../outputs/StreamConnections.js'
+import { config } from '../config/ConfigStore.js'
 import { Logger } from 'pino'
 
 type Options = {
 	listenerStats: ListenerStats
-	streamManager: StreamManager
+	sourceManager: SourceManager
 	connections: StreamConnections
 	log: Logger
 }
 
-export default async function (app: FastifyInstance, { listenerStats, streamManager, connections, log }: Options) {
+export default async function (app: FastifyInstance, { listenerStats, sourceManager, connections, log }: Options) {
 	if (!statsAuthConfigured()) {
 		log.warn(
 			'Not initializing statistic paths as STATS_USERNAME / STATS_PASSWORD are not set'
@@ -37,7 +37,7 @@ export default async function (app: FastifyInstance, { listenerStats, streamMana
 			])
 
 			const m = process.memoryUsage()
-			const budgetBytes = env.STREAM_TOTAL_BUFFER_MB * 1024 * 1024
+			const budgetBytes = config().server.streamTotalBufferMb * 1024 * 1024
 			const totalBufferedBytes = connections.totalBuffered()
 
 			return {
@@ -53,10 +53,10 @@ export default async function (app: FastifyInstance, { listenerStats, streamMana
 				uniqueIpCount,
 				listenersByReferer,
 				listenersByCountry,
-				listeners: env.STATS_DEBUG
+				listeners: config().server.statsDebug
 					? listeners.map(l => ({ ...l, bufferedBytes: connections.bufferedFor(l.id) }))
 					: listeners,
-				uptime: streamManager.getUptime(),
+				uptime: sourceManager.getUptime(),
 				memory: {
 					main: {
 						rss: m.rss,

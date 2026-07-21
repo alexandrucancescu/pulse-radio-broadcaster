@@ -1,17 +1,15 @@
 import { RouteHandlerMethod } from 'fastify'
-import StreamMount, { Consumer } from './StreamMount.js'
-import { compileHeadersForStream } from '../util/headers.js'
-import type ListenerStats from '../stats/ListenerStats.js'
-import type NowPlaying from '../nowPlaying.js'
+import IcecastOutput, { Consumer } from './IcecastOutput.js'
+import { compileHeadersForStream } from '../../util/headers.js'
+import type ListenerStats from '../../stats/ListenerStats.js'
+import type NowPlaying from '../../nowPlaying.js'
 import IcyInjector, { isIcyCapable } from './IcyInjector.js'
-import type StreamConnections from './StreamConnections.js'
-import env from '../env.js'
+import type StreamConnections from '../StreamConnections.js'
+import { config } from '../../config/ConfigStore.js'
 import { Logger } from 'pino'
 
-const blockedAgents = (env.BLOCKED_USER_AGENTS ?? []).map(ua => ua.toLowerCase())
-
 export default function createStreamHandler(
-	stream: StreamMount,
+	stream: IcecastOutput,
 	listenerStats: ListenerStats,
 	nowPlaying: NowPlaying,
 	connections: StreamConnections,
@@ -21,18 +19,15 @@ export default function createStreamHandler(
 	const compiledIcyHeaders = compileHeadersForStream(stream.config, true)
 	const icyEnabled =
 		stream.config.icyMetadata ?? isIcyCapable(stream.config.encoder.format)
-	// A listener whose unsent buffer exceeds STREAM_MAX_BUFFER_SECONDS of
-	// audio has stalled (paused player, dead connection). Kick it: Node
-	// would otherwise buffer audio for it in memory without bound — the
-	// classic slow-client leak every radio server guards against (cf.
-	// Icecast's queue-size limit). The default (5 min) rides out mobile
-	// network blips without dropping real listeners.
-	const maxBufferedBytes = stream.encoder.bitRateBytes * env.STREAM_MAX_BUFFER_SECONDS
 
 	return async (req, reply) => {
+		// Server-section settings are live config — read per request
+		const server = config().server
+
+		const blockedAgents = server.blockedUserAgents
 		if (blockedAgents.length > 0) {
 			const ua = (req.headers['user-agent'] ?? '').toLowerCase()
-			if (blockedAgents.some(blocked => ua.includes(blocked))) {
+			if (blockedAgents.some(blocked => ua.includes(blocked.toLowerCase()))) {
 				reply.status(403)
 				return { error: 'Forbidden' }
 			}
@@ -52,8 +47,8 @@ export default function createStreamHandler(
 		}
 
 		if (
-			env.MAX_CONNECTIONS_PER_IP > 0 &&
-			connections.countForIp(req.ip) >= env.MAX_CONNECTIONS_PER_IP
+			server.maxConnectionsPerIp > 0 &&
+			connections.countForIp(req.ip) >= server.maxConnectionsPerIp
 		) {
 			log.info(`Rejecting connection from ${req.ip}: per-IP limit reached`)
 			reply.status(429)
@@ -72,14 +67,19 @@ export default function createStreamHandler(
 
 		// ICY metadata is opt-in per client and counted per connection
 		const wantsIcy = icyEnabled && req.headers['icy-metadata'] === '1'
-		const injector = wantsIcy ? new IcyInjector(env.ICY_METAINT, nowPlaying) : null
+		const injector = wantsIcy ? new IcyInjector(server.icyMetaint, nowPlaying) : null
 
 		if (wantsIcy) {
 			// Prevent Node from applying chunked framing to the identity body
 			reply.raw.useChunkedEncodingByDefault = false
 		}
 
-		reply.raw.writeHead(200, wantsIcy ? compiledIcyHeaders : compiledHeaders)
+		reply.raw.writeHead(
+			200,
+			wantsIcy
+				? { ...compiledIcyHeaders, 'icy-metaint': String(server.icyMetaint) }
+				: compiledHeaders
+		)
 		reply.raw.flushHeaders()
 
 		const listenerIdPromise = listenerStats.addListener(
@@ -97,10 +97,15 @@ export default function createStreamHandler(
 			connectionHandle.attachListenerId(id)
 		})
 
-		// The initial burst is legitimately unsent for a brand-new, healthy
-		// client, so it gets an allowance on top of the stall threshold —
-		// otherwise a small STREAM_MAX_BUFFER_SECONDS insta-kicks everyone
-		const maxBuffered = maxBufferedBytes + stream.burstBuffer.length
+		// A listener whose unsent buffer exceeds streamMaxBufferSeconds of
+		// audio has stalled (paused player, dead connection) — the classic
+		// slow-client leak every radio server bounds (cf. Icecast's
+		// queue-size limit). The initial burst is legitimately unsent for a
+		// brand-new, healthy client, so it gets an allowance on top —
+		// otherwise a small threshold insta-kicks everyone.
+		const maxBuffered =
+			stream.encoder.bitRateBytes * server.streamMaxBufferSeconds +
+			stream.burstBuffer.length
 
 		const consumer: Consumer = {
 			onData: (chunk: Buffer) => {

@@ -43,16 +43,15 @@ export function sweepBufferBudget(
 
 export function startBufferBudget(
 	connections: StreamConnections,
-	budgetBytes: number,
+	// Read fresh each sweep so config changes apply live; <= 0 disables
+	getBudgetBytes: () => number,
 	log: Logger
 ) {
-	if (budgetBytes <= 0) return
+	const timer = setInterval(() => {
+		const budgetBytes = getBudgetBytes()
+		if (budgetBytes <= 0) return
 
-	log.info(`Buffer budget active: ${Math.round(budgetBytes / 1048576)} MB total`)
-
-	const timer = setInterval(
-		() => sweepBufferBudget(connections, budgetBytes, log),
-		SWEEP_INTERVAL_MS
-	)
+		sweepBufferBudget(connections, budgetBytes, log)
+	}, SWEEP_INTERVAL_MS)
 	timer.unref()
 }
