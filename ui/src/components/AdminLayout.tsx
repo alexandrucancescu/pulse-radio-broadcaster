@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { clearAuth, getAuth } from '../lib/auth'
 import { restartFlag } from '../lib/restartFlag'
@@ -30,6 +30,14 @@ export default function AdminLayout() {
   const navigate = useNavigate()
   const restartRequired = useSyncExternalStore(restartFlag.subscribe, restartFlag.get)
   const [restarting, setRestarting] = useState(false)
+  const [confirmRestart, setConfirmRestart] = useState(false)
+
+  // Revert the confirm state if the second click never comes
+  useEffect(() => {
+    if (!confirmRestart) return
+    const timer = setTimeout(() => setConfirmRestart(false), 4000)
+    return () => clearTimeout(timer)
+  }, [confirmRestart])
 
   if (!getAuth()) return <Navigate to="/login" replace />
 
@@ -100,7 +108,24 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <div className="border-t border-zinc-800 p-3">
+        <div className="space-y-1 border-t border-zinc-800 p-3">
+          <button
+            onClick={() => {
+              if (!confirmRestart) {
+                setConfirmRestart(true)
+                return
+              }
+              setConfirmRestart(false)
+              restart()
+            }}
+            className={`w-full rounded-md px-2 py-1.5 text-left text-sm transition ${
+              confirmRestart
+                ? 'bg-red-900/60 text-red-200 hover:bg-red-900'
+                : 'text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300'
+            }`}
+          >
+            {confirmRestart ? 'Click again to confirm — stream will blip' : 'Restart server'}
+          </button>
           <button
             onClick={() => {
               clearAuth()
