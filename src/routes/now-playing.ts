@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify'
+import { FastifySSEPlugin } from 'fastify-sse-v2'
 import env from '../env.js'
 import type NowPlaying from '../nowPlaying.js'
 import type { NowPlayingEntry } from '../nowPlaying.js'
@@ -15,6 +16,8 @@ const SSE_HEARTBEAT_MS = 25_000
 export default async function (app: FastifyInstance, { nowPlaying, log }: Options) {
 	// Every SSE subscriber adds an 'update' listener
 	nowPlaying.setMaxListeners(0)
+
+	await app.register(FastifySSEPlugin)
 
 	if (env.METADATA_TOKEN) {
 		app.post<{ Body: { title: string } }>('/api/song-playing', async (req, reply) => {
@@ -54,35 +57,36 @@ export default async function (app: FastifyInstance, { nowPlaying, log }: Option
 			return reply.status(403).send({ error: 'Origin not allowed' })
 		}
 
-		reply.hijack()
-		const raw = reply.raw
-
-		raw.writeHead(200, {
-			'content-type': 'text/event-stream',
-			'cache-control': 'no-cache, no-transform',
-			connection: 'keep-alive',
-			// Disable proxy response buffering (nginx and compatibles)
-			'x-accel-buffering': 'no',
-			...(origin && {
-				'access-control-allow-origin': allowedOrigins.includes('*') ? '*' : origin,
-				vary: 'origin',
-			}),
-		})
-		raw.write('retry: 5000\n\n')
+		if (origin) {
+			reply.header(
+				'access-control-allow-origin',
+				allowedOrigins.includes('*') ? '*' : origin
+			)
+			reply.header('vary', 'origin')
+		}
+		// Disable proxy response buffering (nginx and compatibles)
+		reply.header('x-accel-buffering', 'no')
+		// An explicit Content-Encoding makes proxy compress middlewares skip
+		// this response — Traefik v3's br/zstd encoders buffer SSE forever
+		reply.header('content-encoding', 'identity')
 
 		const send = (entry: NowPlayingEntry | null) => {
-			raw.write(`event: now-playing\ndata: ${JSON.stringify(entry)}\n\n`)
+			reply.sse({ event: 'now-playing', data: JSON.stringify(entry) })
 		}
 
 		send(nowPlaying.getCurrent())
 		nowPlaying.on('update', send)
 
-		// Comment frames keep idle connections alive through proxies
-		const heartbeat = setInterval(() => raw.write(': ping\n\n'), SSE_HEARTBEAT_MS)
+		// Periodic frames keep idle connections alive through proxies
+		const heartbeat = setInterval(
+			() => reply.sse({ event: 'ping', data: 'ping' }),
+			SSE_HEARTBEAT_MS
+		)
 
 		req.raw.on('close', () => {
 			clearInterval(heartbeat)
 			nowPlaying.off('update', send)
+			reply.sseContext.source.end()
 		})
 	})
 }
