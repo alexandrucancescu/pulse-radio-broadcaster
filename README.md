@@ -58,10 +58,10 @@ the `.env` file, on a PaaS like Coolify via its env var UI).
 | `RTP_PORT` | `3100` | UDP port the encoder sends RTP to |
 | `RTP_SAMPLE_RATE` | `44100` | Sample rate of the incoming PCM |
 | `RTP_FORMAT` | `s16be` | Sample format of the incoming PCM |
-| `RTP_ALLOWED_IPS` | — **(required)** | Comma-separated IPs / CIDR ranges allowed to send RTP, e.g. `82.77.1.5,192.168.0.0/16` |
+| `RTP_ALLOWED_IPS` | *(empty)* | Comma-separated IPs / CIDR ranges allowed to send RTP, e.g. `82.77.1.5,192.168.0.0/16`. Empty rejects all senders (RTP input effectively off) |
 | `RTP_NO_DATA_DISCONNECT_DELAY` | `60` | Seconds of RTP silence before encoders stop and listeners are disconnected |
 | `RTP_REORDER_DEPTH` | `40` | Jitter buffer depth in packets (~320ms at 44.1kHz stereo PCM) |
-| `STREAMS` | — **(required)** | JSON array of output streams, see below |
+| `STREAMS` | one 192kbps MP3 at `/stream` | JSON array of output streams, see below |
 | `STATION_NAME` | `Radio Station` | Station name (Icy headers + public page) |
 | `STATION_DESCRIPTION` | `N/A` | Station description |
 | `STATION_GENRE` | `N/A` | Station genre |

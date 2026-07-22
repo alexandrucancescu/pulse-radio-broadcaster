@@ -42,7 +42,7 @@ const env = createEnv({
 		RTP_PORT: z.coerce.number().int().min(0).default(3100),
 		RTP_SAMPLE_RATE: z.coerce.number().int().positive().default(44100),
 		RTP_FORMAT: z.string().default('s16be'),
-		RTP_ALLOWED_IPS: csv,
+		RTP_ALLOWED_IPS: csv.optional(),
 		RTP_NO_DATA_DISCONNECT_DELAY: z.coerce.number().int().positive().default(60),
 		// A listener whose unsent audio buffer exceeds this many seconds is
 		// kicked as stalled (dead/paused client), bounding the slow-client
@@ -58,7 +58,7 @@ const env = createEnv({
 		// (~320ms at ~126 packets/sec for 44.1kHz stereo 16-bit PCM)
 		RTP_REORDER_DEPTH: z.coerce.number().int().positive().default(40),
 
-		STREAMS: json(z.array(streamSchema).min(1)),
+		STREAMS: json(z.array(streamSchema).min(1)).optional(),
 
 		// Hard cap on concurrent stream connections per IP, rejected with 429
 		// before they become listeners. Generous enough for NAT/CGNAT groups

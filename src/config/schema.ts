@@ -59,6 +59,9 @@ export const serverSchema = z.object({
 	icyMetaint: z.number().int().positive().default(16000),
 	// Per-listener unsent-buffer bytes exposed in /stats (debug)
 	statsDebug: z.boolean().default(false),
+	// Origins allowed to subscribe to the now-playing SSE feed cross-origin.
+	// Exact match or '*'. Empty = same-origin / no-Origin clients only.
+	nowPlayingSseOrigins: z.array(z.string()).default([]),
 })
 
 const eqBandSchema = z.object({

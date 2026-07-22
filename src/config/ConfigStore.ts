@@ -16,6 +16,11 @@ const CONFIG_FILE = join(DATA_DIR, 'config.json')
 // Pre-config-store DSP settings file, absorbed as the dsp section
 const LEGACY_DSP_FILE = join(DATA_DIR, 'dsp.json')
 
+// First-boot streams when STREAMS env is not provided; edit via admin UI
+const DEFAULT_STREAMS: AppConfig['streams'] = [
+	{ format: 'mp3', paths: ['/stream', '/stream.mp3'], bitrate: 192 },
+]
+
 /**
  * The UI-managed configuration. File wins forever once written; env is
  * only the first-boot seed (that seeding IS the prod migration path).
@@ -71,12 +76,12 @@ class ConfigStore {
 				rtp: {
 					sampleRate: env.RTP_SAMPLE_RATE,
 					format: env.RTP_FORMAT,
-					allowedIps: env.RTP_ALLOWED_IPS,
+					allowedIps: env.RTP_ALLOWED_IPS ?? [],
 					noDataDisconnectDelaySec: env.RTP_NO_DATA_DISCONNECT_DELAY,
 					reorderDepth: env.RTP_REORDER_DEPTH,
 				},
 			},
-			streams: env.STREAMS,
+			streams: env.STREAMS ?? DEFAULT_STREAMS,
 			server: {
 				streamMaxBufferSeconds: env.STREAM_MAX_BUFFER_SECONDS,
 				streamTotalBufferMb: env.STREAM_TOTAL_BUFFER_MB,

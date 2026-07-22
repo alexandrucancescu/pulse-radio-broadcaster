@@ -16,11 +16,13 @@ export default function ServerConfigPage() {
   const save = useSaveSection('server')
   const [form, setForm] = useState<ServerConfig | null>(null)
   const [blockedUaText, setBlockedUaText] = useState('')
+  const [sseOriginsText, setSseOriginsText] = useState('')
 
   useEffect(() => {
     if (data && !form) {
       setForm(data.config.server)
       setBlockedUaText(data.config.server.blockedUserAgents.join('\n'))
+      setSseOriginsText((data.config.server.nowPlayingSseOrigins ?? []).join('\n'))
     }
   }, [data, form])
 
@@ -39,6 +41,10 @@ export default function ServerConfigPage() {
       blockedUserAgents: blockedUaText
         .split(/[\n,]/)
         .map((s) => s.trim())
+        .filter(Boolean),
+      nowPlayingSseOrigins: sseOriginsText
+        .split(/[\n,]/)
+        .map((s) => s.trim().replace(/\/+$/, ''))
         .filter(Boolean),
     })
 
@@ -103,6 +109,18 @@ export default function ServerConfigPage() {
             onChange={setBlockedUaText}
             rows={4}
             placeholder={'Bytespider\npython-requests'}
+          />
+        </Field>
+
+        <Field
+          label="Now-playing SSE allowed origins"
+          hint="Origins allowed to subscribe to /api/now-playing/sse cross-origin (exact match or *). One per line. Empty = same-origin only."
+        >
+          <TextArea
+            value={sseOriginsText}
+            onChange={setSseOriginsText}
+            rows={3}
+            placeholder={'https://pulse-broadcast.com'}
           />
         </Field>
 

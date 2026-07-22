@@ -46,6 +46,7 @@ export type ServerConfig = {
   blockedUserAgents: string[]
   icyMetaint: number
   statsDebug: boolean
+  nowPlayingSseOrigins: string[]
 }
 
 export type AppConfig = {
