@@ -14,14 +14,26 @@ export default async function (app: FastifyInstance, { outputManager }: Options)
 				description: config().station.description,
 				genre: config().station.genre,
 			},
-			streams: outputManager.icecast().map(s => ({
-				paths: s.config.paths,
-				format: s.config.encoder.format,
-				bitrate: s.config.encoder.bitrate,
-				contentType: s.config.contentType,
-				active: s.isActive,
-				listeners: s.consumers.size,
-			})),
+			streams: [
+				...outputManager.icecast().map(s => ({
+					type: 'http' as const,
+					paths: s.config.paths,
+					format: s.config.encoder.format,
+					bitrate: s.config.encoder.bitrate,
+					contentType: s.config.contentType,
+					active: s.isActive,
+					listeners: s.consumers.size,
+				})),
+				...outputManager.hls().map(s => ({
+					type: 'hls' as const,
+					paths: [s.playlistPath],
+					format: s.format,
+					bitrate: s.bitrate,
+					contentType: undefined,
+					active: s.isActive,
+					listeners: s.listenerCount,
+				})),
+			],
 		}
 	})
 
@@ -29,7 +41,10 @@ export default async function (app: FastifyInstance, { outputManager }: Options)
 		// Streams and data endpoints are pointless to crawl and well-behaved
 		// bots (incl. AI crawlers) respect this. Everything else — the index
 		// and dashboard UI — stays crawlable by default.
-		const streamPaths = outputManager.icecast().flatMap(s => s.config.paths)
+		const streamPaths = [
+			...outputManager.icecast().flatMap(s => s.config.paths),
+			...outputManager.hls().map(s => `${s.name}/`),
+		]
 		const lines = [
 			'User-agent: *',
 			...streamPaths.map(p => `Disallow: ${p}`),

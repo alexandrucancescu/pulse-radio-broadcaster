@@ -26,8 +26,11 @@ export type InputsConfig = {
 }
 
 export type StreamConfig = {
+  type?: 'http' | 'hls'
   format: string
   paths: string[]
+  segmentSeconds?: number
+  windowSegments?: number
   bitrate?: number
   channels?: number
   codec?: string

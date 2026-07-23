@@ -11,6 +11,7 @@ import {
 } from '../../components/config/fields'
 
 const FORMATS = ['mp3', 'adts', 'aac', 'aac_he', 'aac_he_v2', 'opus']
+const AAC_FORMATS = ['adts', 'aac', 'aac_he', 'aac_he_v2']
 
 const NEW_STREAM: StreamConfig = {
   format: 'mp3',
@@ -39,6 +40,8 @@ export default function StreamsConfigPage() {
       streams.map((s) => ({
         ...s,
         bitrate: s.bitrate || undefined,
+        segmentSeconds: s.type === 'hls' ? s.segmentSeconds || undefined : undefined,
+        windowSegments: s.type === 'hls' ? s.windowSegments || undefined : undefined,
         channels: s.channels || undefined,
         sampleRate: s.sampleRate || undefined,
         burstSize: s.burstSize || undefined,
@@ -75,13 +78,30 @@ export default function StreamsConfigPage() {
           }
         >
           <div className="grid grid-cols-2 gap-4">
+            <Field label="Type" hint="HLS serves a segmented playlist (AAC only)">
+              <select
+                value={stream.type ?? 'http'}
+                onChange={(e) =>
+                  setStream(i, {
+                    type: e.target.value as 'http' | 'hls',
+                    ...(e.target.value === 'hls' && !AAC_FORMATS.includes(stream.format)
+                      ? { format: 'aac' }
+                      : {}),
+                  })
+                }
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100"
+              >
+                <option value="http">HTTP (icecast-style)</option>
+                <option value="hls">HLS</option>
+              </select>
+            </Field>
             <Field label="Format">
               <select
                 value={stream.format}
                 onChange={(e) => setStream(i, { format: e.target.value })}
                 className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100"
               >
-                {FORMATS.map((f) => (
+                {(stream.type === 'hls' ? AAC_FORMATS : FORMATS).map((f) => (
                   <option key={f} value={f}>
                     {f}
                   </option>
@@ -112,28 +132,51 @@ export default function StreamsConfigPage() {
                 onChange={(v) => setStream(i, { sampleRate: v === '' ? undefined : v })}
               />
             </Field>
-            <Field label="Burst size (bytes)" hint="Empty = 6 seconds of audio">
-              <NumberInput
-                value={stream.burstSize ?? ''}
-                onChange={(v) => setStream(i, { burstSize: v === '' ? undefined : v })}
-              />
-            </Field>
-            <Field label="ICY metadata">
-              <select
-                value={stream.icyMetadata === undefined ? 'auto' : String(stream.icyMetadata)}
-                onChange={(e) =>
-                  setStream(i, {
-                    icyMetadata:
-                      e.target.value === 'auto' ? undefined : e.target.value === 'true',
-                  })
-                }
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100"
-              >
-                <option value="auto">Auto (on, except opus)</option>
-                <option value="true">Enabled</option>
-                <option value="false">Disabled</option>
-              </select>
-            </Field>
+            {stream.type === 'hls' ? (
+              <>
+                <Field label="Segment length (seconds)" hint="Empty = 6">
+                  <NumberInput
+                    value={stream.segmentSeconds ?? ''}
+                    onChange={(v) =>
+                      setStream(i, { segmentSeconds: v === '' ? undefined : v })
+                    }
+                  />
+                </Field>
+                <Field label="Playlist window (segments)" hint="Empty = 5">
+                  <NumberInput
+                    value={stream.windowSegments ?? ''}
+                    onChange={(v) =>
+                      setStream(i, { windowSegments: v === '' ? undefined : v })
+                    }
+                  />
+                </Field>
+              </>
+            ) : (
+              <>
+                <Field label="Burst size (bytes)" hint="Empty = 6 seconds of audio">
+                  <NumberInput
+                    value={stream.burstSize ?? ''}
+                    onChange={(v) => setStream(i, { burstSize: v === '' ? undefined : v })}
+                  />
+                </Field>
+                <Field label="ICY metadata">
+                  <select
+                    value={stream.icyMetadata === undefined ? 'auto' : String(stream.icyMetadata)}
+                    onChange={(e) =>
+                      setStream(i, {
+                        icyMetadata:
+                          e.target.value === 'auto' ? undefined : e.target.value === 'true',
+                      })
+                    }
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100"
+                  >
+                    <option value="auto">Auto (on, except opus)</option>
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                  </select>
+                </Field>
+              </>
+            )}
             <Field label="Content-Type override" hint="Usually empty">
               <TextInput
                 value={stream.contentType ?? ''}

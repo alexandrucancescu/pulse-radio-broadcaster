@@ -9,6 +9,7 @@ import SilenceSource from './sources/SilenceSource.js'
 import SourceManager from './sources/SourceManager.js'
 import OutputManager from './outputs/OutputManager.js'
 import IcecastOutput from './outputs/icecast/IcecastOutput.js'
+import HlsOutput from './outputs/hls/HlsOutput.js'
 import MonitorOutput from './outputs/monitor/MonitorOutput.js'
 import StreamConnections from './outputs/StreamConnections.js'
 import { startBufferBudget } from './outputs/BufferBudget.js'
@@ -60,14 +61,27 @@ const previewDsp = new DspChain(dspFormat, config().dsp)
 // ── Outputs: everything that consumes the bus ────────────────────────
 const inputFormat = { format: rtpConfig.format, sampleRate: rtpConfig.sampleRate }
 
-const icecastOutputs = config().streams.map(
-	streamConfig =>
-		new IcecastOutput(
-			inputFormat,
-			streamConfig,
-			log.child({}, { msgPrefix: `[STREAM ${streamConfig.paths[0]}] ` })
-		)
-)
+const icecastOutputs = config()
+	.streams.filter(streamConfig => streamConfig.type !== 'hls')
+	.map(
+		streamConfig =>
+			new IcecastOutput(
+				inputFormat,
+				streamConfig,
+				log.child({}, { msgPrefix: `[STREAM ${streamConfig.paths[0]}] ` })
+			)
+	)
+
+const hlsOutputs = config()
+	.streams.filter(streamConfig => streamConfig.type === 'hls')
+	.map(
+		streamConfig =>
+			new HlsOutput(
+				inputFormat,
+				streamConfig,
+				log.child({}, { msgPrefix: `[HLS ${streamConfig.paths[0]}] ` })
+			)
+	)
 
 const monitorOutput = new MonitorOutput(
 	rtpConfig.sampleRate,
@@ -83,6 +97,7 @@ sourceManager.on('data', chunk => {
 
 const outputManager = new OutputManager({ live: dspChain, preview: previewDsp }, [
 	...icecastOutputs,
+	...hlsOutputs,
 	monitorOutput,
 ])
 

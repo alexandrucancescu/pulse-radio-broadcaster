@@ -2,6 +2,7 @@
 import type AudioOutput from './AudioOutput.js'
 import type { OutputRouteDeps, OutputTap, AnyFastifyInstance } from './AudioOutput.js'
 import IcecastOutput from './icecast/IcecastOutput.js'
+import HlsOutput from './hls/HlsOutput.js'
 import log from '../util/log.js'
 
 // Anything that emits bus PCM chunks (a DspChain tap)
@@ -50,6 +51,13 @@ export default class OutputManager {
 	public icecast(): IcecastOutput[] {
 		return this.outputs.filter(
 			(output): output is IcecastOutput => output instanceof IcecastOutput
+		)
+	}
+
+	/** The HLS mounts (stream directory, robots.txt) */
+	public hls(): HlsOutput[] {
+		return this.outputs.filter(
+			(output): output is HlsOutput => output instanceof HlsOutput
 		)
 	}
 }

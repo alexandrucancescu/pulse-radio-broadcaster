@@ -20,6 +20,16 @@ const defaultStreamHeaders = {
 	Expires: 'Wed, 19 Dec 1980 02:47:29 GMT',
 	// A live stream is not seekable; stops clients attempting ranged requests
 	'Accept-Ranges': 'none',
+	// Keeps reverse proxies (Traefik/nginx/CF compress middlewares) from
+	// gzipping the stream — compression breaks icy-metaint byte counting
+	// and garbles audio on clients that advertise but don't decompress.
+	// Overridable per stream via the headers map.
+	'Content-Encoding': 'identity',
+	// Streams are public; without the expose header CORS hides the icy-*
+	// headers from browser JS players that read metaint
+	'Access-Control-Allow-Origin': '*',
+	'Access-Control-Expose-Headers':
+		'icy-metaint, icy-name, icy-genre, icy-description, icy-url, icy-br, icy-pub, ice-audio-info',
 }
 
 export function compileHeadersForStream(streamConfig: MountConfig, icy = false) {

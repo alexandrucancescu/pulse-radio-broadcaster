@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 export type StreamInfo = {
+  type?: 'http' | 'hls'
   paths: string[]
   format: string
   bitrate?: number

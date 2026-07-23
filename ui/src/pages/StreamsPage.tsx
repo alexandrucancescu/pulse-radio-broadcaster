@@ -53,6 +53,11 @@ export default function StreamsPage() {
                         <span className="rounded bg-zinc-700 px-2 py-0.5 text-xs font-medium">
                           {FORMAT_LABELS[stream.format] ?? stream.format.toUpperCase()}
                         </span>
+                        {stream.type === 'hls' && (
+                          <span className="rounded bg-violet-900/60 px-2 py-0.5 text-xs font-medium text-violet-300">
+                            HLS
+                          </span>
+                        )}
                         {stream.bitrate && (
                           <span className="text-xs text-zinc-500">
                             {stream.bitrate} kbps

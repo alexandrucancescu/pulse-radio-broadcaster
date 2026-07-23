@@ -18,7 +18,7 @@ const LEGACY_DSP_FILE = join(DATA_DIR, 'dsp.json')
 
 // First-boot streams when STREAMS env is not provided; edit via admin UI
 const DEFAULT_STREAMS: AppConfig['streams'] = [
-	{ format: 'mp3', paths: ['/stream', '/stream.mp3'], bitrate: 192 },
+	{ type: 'http', format: 'mp3', paths: ['/stream', '/stream.mp3'], bitrate: 192 },
 ]
 
 /**

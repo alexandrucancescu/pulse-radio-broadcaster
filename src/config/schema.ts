@@ -6,8 +6,15 @@ import { DEFAULT_SETTINGS } from '../dsp/settings.js'
 // must know (ports, bind addresses, secrets, data dir) — see env.ts.
 
 export const streamSchema = z.object({
+	// 'http' = icecast-style continuous connection; 'hls' = segmented
+	// playlist served from memory (AAC formats only)
+	type: z.enum(['http', 'hls']).default('http'),
 	format: z.string(),
 	paths: z.array(z.string().min(2)).min(1),
+	// HLS only: target segment duration and how many segments the
+	// playlist advertises (client latency ≈ segmentSeconds × 3)
+	segmentSeconds: z.number().int().min(2).max(30).optional(),
+	windowSegments: z.number().int().min(3).max(20).optional(),
 	bitrate: z.number().int().positive().optional(),
 	channels: z.number().int().positive().optional(),
 	codec: z.string().optional(),
@@ -98,6 +105,7 @@ export const configSchema = z.object({
 	dsp: dspSchema.default({}),
 })
 
+export type StreamConfig = z.infer<typeof streamSchema>
 export type AppConfig = z.infer<typeof configSchema>
 export type ConfigSection = keyof AppConfig
 
