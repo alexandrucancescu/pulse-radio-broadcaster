@@ -46,9 +46,12 @@ async function fetchDsp(): Promise<DspResponse> {
 }
 
 async function send(path: string, method: string, body?: unknown) {
+  // Only declare a JSON content-type when we actually send a body — an empty
+  // body with Content-Type: application/json makes Fastify 400 (commit/reset
+  // are bodyless POSTs).
   const res = await authFetch(path, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import StreamsPage from './pages/StreamsPage'
 import LoginPage from './pages/LoginPage'
-import DashboardPage from './pages/DashboardPage'
+import LivePage from './pages/LivePage'
 import HistoryPage from './pages/HistoryPage'
 import DspPage from './pages/DspPage'
 import AdminLayout from './components/AdminLayout'
@@ -20,7 +20,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
 
         <Route path="/dashboard" element={<AdminLayout />}>
-          <Route index element={<DashboardPage />} />
+          <Route index element={<LivePage />} />
           <Route path="history" element={<HistoryPage />} />
           <Route path="dsp" element={<DspPage />} />
           <Route path="library" element={<LibraryPage />} />
