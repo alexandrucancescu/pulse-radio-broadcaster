@@ -6,6 +6,7 @@ import { useMe } from '../hooks/useMe'
 import { restartFlag } from '../lib/restartFlag'
 import { requestRestart } from '../hooks/useConfig'
 import Footer from './Footer'
+import PulseLogo from './PulseLogo'
 
 const NAV = [
   {
@@ -94,9 +95,12 @@ export default function AdminLayout() {
       )}
 
       <aside className="flex w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/50">
-        <div className="border-b border-zinc-800 px-5 py-4">
-          <h1 className="text-lg font-semibold">Pulse Radio</h1>
-          <p className="text-xs text-zinc-500">Admin panel</p>
+        <div className="flex items-center gap-2.5 border-b border-zinc-800 px-5 py-4">
+          <PulseLogo className="h-8 w-8 shrink-0 text-[#f23939]" />
+          <div>
+            <h1 className="text-lg font-semibold">Pulse Radio</h1>
+            <p className="text-xs text-zinc-500">Admin panel</p>
+          </div>
         </div>
 
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">

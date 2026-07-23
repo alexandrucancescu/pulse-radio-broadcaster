@@ -27,14 +27,23 @@ export default function StreamsPage() {
           <>
             {nowPlaying?.current && <NowPlayingBar entry={nowPlaying.current} />}
 
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold">{data?.station.name}</h1>
-              {data?.station.description && data.station.description !== 'N/A' && (
-                <p className="text-zinc-400">{data.station.description}</p>
+            <div className="flex items-center gap-4">
+              {data?.station.hasCustomLogo && (
+                <img
+                  src="/logo.png"
+                  alt={`${data.station.name} logo`}
+                  className="h-16 w-16 shrink-0 rounded-xl object-contain"
+                />
               )}
-              {data?.station.genre && data.station.genre !== 'N/A' && (
-                <p className="text-sm text-zinc-500">Genre: {data.station.genre}</p>
-              )}
+              <div className="space-y-1">
+                <h1 className="text-3xl font-bold">{data?.station.name}</h1>
+                {data?.station.description && data.station.description !== 'N/A' && (
+                  <p className="text-zinc-400">{data.station.description}</p>
+                )}
+                {data?.station.genre && data.station.genre !== 'N/A' && (
+                  <p className="text-sm text-zinc-500">Genre: {data.station.genre}</p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-4">

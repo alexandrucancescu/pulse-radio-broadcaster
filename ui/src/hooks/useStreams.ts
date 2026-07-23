@@ -15,6 +15,7 @@ export type StreamsResponse = {
     name: string
     description: string
     genre: string
+    hasCustomLogo: boolean
   }
   streams: StreamInfo[]
 }

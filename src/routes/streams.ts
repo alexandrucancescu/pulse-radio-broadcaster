@@ -1,18 +1,23 @@
 import { FastifyInstance } from 'fastify'
 import type OutputManager from '../outputs/OutputManager.js'
+import type BrandingManager from '../branding/BrandingManager.js'
 import { config } from '../config/ConfigStore.js'
 
 type Options = {
 	outputManager: OutputManager
+	branding: BrandingManager
 }
 
-export default async function (app: FastifyInstance, { outputManager }: Options) {
+export default async function (app: FastifyInstance, { outputManager, branding }: Options) {
 	app.get('/api/streams', async () => {
 		return {
 			station: {
 				name: config().station.name,
 				description: config().station.description,
 				genre: config().station.genre,
+				// The public page shows /logo.png only when it's a real
+				// station logo, not our bundled default
+				hasCustomLogo: branding.hasCustomLogo,
 			},
 			streams: [
 				...outputManager.icecast().map(s => ({

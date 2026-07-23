@@ -1,7 +1,19 @@
+import PulseLogo from './PulseLogo'
+
 export default function Footer() {
   return (
     <footer className="border-t border-zinc-800 py-6 text-center text-xs text-zinc-500">
-      <p>Powered by Pulse Radio Broadcaster</p>
+      <p>
+        <a
+          href="https://pulse-broadcast.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-zinc-300 hover:underline"
+        >
+          <PulseLogo className="h-4 w-4 text-[#f23939]" />
+          Powered by Pulse Broadcast
+        </a>
+      </p>
       <p>
         Developed by{' '}
         <a
