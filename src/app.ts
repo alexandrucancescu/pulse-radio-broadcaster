@@ -3,6 +3,7 @@ import Fastify from 'fastify'
 import log from './util/log.js'
 import AutoLoad from '@fastify/autoload'
 import fastifyStatic from '@fastify/static'
+import authPlugin from './plugins/auth.js'
 import type SourceManager from './sources/SourceManager.js'
 import type OutputManager from './outputs/OutputManager.js'
 import type ListenerStats from './stats/ListenerStats.js'
@@ -33,6 +34,10 @@ export default function createApp(
 		),
 		trustProxy: true,
 	})
+
+	// Session cookie parsing + req.auth decoration for every route;
+	// individual routes opt into enforcement via requireAuth(...)
+	app.register(authPlugin)
 
 	app.register(AutoLoad, {
 		dir: join(import.meta.dirname, './routes'),

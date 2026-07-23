@@ -1,8 +1,7 @@
 import { FastifyInstance } from 'fastify'
-import BasicAuth from '@fastify/basic-auth'
 import Multipart from '@fastify/multipart'
 import { extname } from 'node:path'
-import { statsAuthConfigured, validateStatsAuth } from '../util/auth.js'
+import { requireAuth } from '../plugins/auth.js'
 import type BrandingManager from '../branding/BrandingManager.js'
 import { config } from '../config/ConfigStore.js'
 import { Logger } from 'pino'
@@ -75,47 +74,41 @@ export default async function (app: FastifyInstance, { branding, log }: Options)
 		}
 	})
 
-	if (!statsAuthConfigured()) {
-		log.warn('Not initializing /api/branding as STATS_USERNAME / STATS_PASSWORD are not set')
-		return
-	}
-
 	app.register(Multipart, {
 		limits: { fileSize: 20 * 1024 * 1024, files: 1 },
 	})
 
-	app.register(BasicAuth, {
-		validate: validateStatsAuth,
-		authenticate: true,
-	}).after(() => {
-		app.get('/api/branding', { onRequest: app.basicAuth }, async () => {
-			return { hasCustomLogo: branding.hasCustomLogo, version: branding.assetVersion }
-		})
+	// Reads: any authenticated user. Writes: the 'branding' domain
+	// (admin, or staff holding the branding grant).
+	const canBrand = { onRequest: requireAuth('branding') }
 
-		app.post('/api/branding/logo', { onRequest: app.basicAuth }, async (req, reply) => {
-			const part = await req.file()
+	app.get('/api/branding', { onRequest: requireAuth() }, async () => {
+		return { hasCustomLogo: branding.hasCustomLogo, version: branding.assetVersion }
+	})
 
-			if (!part) {
-				reply.status(400)
-				return { error: 'No file uploaded' }
+	app.post('/api/branding/logo', canBrand, async (req, reply) => {
+		const part = await req.file()
+
+		if (!part) {
+			reply.status(400)
+			return { error: 'No file uploaded' }
+		}
+
+		try {
+			await branding.setLogo(await part.toBuffer(), extname(part.filename))
+			log.info(`Station logo replaced (${part.filename})`)
+			return { success: true, hasCustomLogo: true }
+		} catch (error) {
+			reply.status(400)
+			return {
+				error: error instanceof Error ? error.message : 'Could not process the logo',
 			}
+		}
+	})
 
-			try {
-				await branding.setLogo(await part.toBuffer(), extname(part.filename))
-				log.info(`Station logo replaced (${part.filename})`)
-				return { success: true, hasCustomLogo: true }
-			} catch (error) {
-				reply.status(400)
-				return {
-					error: error instanceof Error ? error.message : 'Could not process the logo',
-				}
-			}
-		})
-
-		app.delete('/api/branding/logo', { onRequest: app.basicAuth }, async () => {
-			await branding.resetToDefault()
-			log.info('Station logo reset to default')
-			return { success: true, hasCustomLogo: false }
-		})
+	app.delete('/api/branding/logo', canBrand, async () => {
+		await branding.resetToDefault()
+		log.info('Station logo reset to default')
+		return { success: true, hasCustomLogo: false }
 	})
 }

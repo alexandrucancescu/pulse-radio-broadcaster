@@ -10,6 +10,7 @@ import InputsConfigPage from './pages/config/InputsConfigPage'
 import StreamsConfigPage from './pages/config/StreamsConfigPage'
 import ServerConfigPage from './pages/config/ServerConfigPage'
 import LibraryPage from './pages/LibraryPage'
+import UsersPage from './pages/UsersPage'
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="config/inputs" element={<InputsConfigPage />} />
           <Route path="config/streams" element={<StreamsConfigPage />} />
           <Route path="config/server" element={<ServerConfigPage />} />
+          <Route path="users" element={<UsersPage />} />
         </Route>
 
         {/* Old bookmark support */}

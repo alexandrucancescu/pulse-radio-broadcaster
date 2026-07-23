@@ -67,7 +67,7 @@ export type StatsResponse = {
 }
 
 async function fetchStats(): Promise<StatsResponse> {
-  const res = await authFetch('/stats')
+  const res = await authFetch('/api/stats')
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

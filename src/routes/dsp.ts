@@ -1,8 +1,8 @@
 import { FastifyInstance } from 'fastify'
-import BasicAuth from '@fastify/basic-auth'
 import { z } from 'zod'
 import type DspChain from '../dsp/DspChain.js'
-import { statsAuthConfigured, validateStatsAuth, monitorToken } from '../util/auth.js'
+import { monitorToken } from '../util/auth.js'
+import { requireAuth } from '../plugins/auth.js'
 import { Logger } from 'pino'
 
 type Options = {
@@ -39,57 +39,52 @@ const dynamicsPatchSchema = z
 	.strict()
 
 export default async function (app: FastifyInstance, { dspChain, previewDsp, log }: Options) {
-	if (!statsAuthConfigured()) {
-		log.warn('Not initializing /api/dsp as STATS_USERNAME / STATS_PASSWORD are not set')
-		return
-	}
+	// Reads: any authenticated user. Writes: the 'dsp' domain (admin, or
+	// staff holding the dsp grant).
+	const canRead = { onRequest: requireAuth() }
+	const canTune = { onRequest: requireAuth('dsp') }
 
-	app.register(BasicAuth, {
-		validate: validateStatsAuth,
-		authenticate: true,
-	}).after(() => {
-		app.get('/api/dsp', { onRequest: app.basicAuth }, async () => {
-			return {
-				live: dspChain.getSettings(),
-				preview: previewDsp.getSettings(),
-				monitorToken: monitorToken(),
-			}
-		})
+	app.get('/api/dsp', canRead, async () => {
+		return {
+			live: dspChain.getSettings(),
+			preview: previewDsp.getSettings(),
+			monitorToken: monitorToken(),
+		}
+	})
 
-		// Edits land on the preview chain (heard on /monitor.wav) only
-		app.patch('/api/dsp/eq', { onRequest: app.basicAuth }, async (req, reply) => {
-			const parsed = eqPatchSchema.safeParse(req.body)
+	// Edits land on the preview chain (heard on /monitor.wav) only
+	app.patch('/api/dsp/eq', canTune, async (req, reply) => {
+		const parsed = eqPatchSchema.safeParse(req.body)
 
-			if (!parsed.success) {
-				reply.status(400)
-				return { error: parsed.error.issues }
-			}
+		if (!parsed.success) {
+			reply.status(400)
+			return { error: parsed.error.issues }
+		}
 
-			return previewDsp.updateEq(parsed.data)
-		})
+		return previewDsp.updateEq(parsed.data)
+	})
 
-		app.patch('/api/dsp/dynamics', { onRequest: app.basicAuth }, async (req, reply) => {
-			const parsed = dynamicsPatchSchema.safeParse(req.body)
+	app.patch('/api/dsp/dynamics', canTune, async (req, reply) => {
+		const parsed = dynamicsPatchSchema.safeParse(req.body)
 
-			if (!parsed.success) {
-				reply.status(400)
-				return { error: parsed.error.issues }
-			}
+		if (!parsed.success) {
+			reply.status(400)
+			return { error: parsed.error.issues }
+		}
 
-			return previewDsp.updateDynamics(parsed.data)
-		})
+		return previewDsp.updateDynamics(parsed.data)
+	})
 
-		// Put the previewed settings on air (persists via the live chain)
-		app.post('/api/dsp/commit', { onRequest: app.basicAuth }, async () => {
-			const committed = dspChain.setSettings(previewDsp.getSettings())
-			log.info('DSP settings committed to live')
-			return { live: committed, preview: previewDsp.getSettings() }
-		})
+	// Put the previewed settings on air (persists via the live chain)
+	app.post('/api/dsp/commit', canTune, async req => {
+		const committed = dspChain.setSettings(previewDsp.getSettings())
+		log.info(`DSP settings committed to live by '${req.auth!.name}'`)
+		return { live: committed, preview: previewDsp.getSettings() }
+	})
 
-		// Discard preview edits, back to what's on air
-		app.post('/api/dsp/reset', { onRequest: app.basicAuth }, async () => {
-			const preview = previewDsp.setSettings(dspChain.getSettings())
-			return { live: dspChain.getSettings(), preview }
-		})
+	// Discard preview edits, back to what's on air
+	app.post('/api/dsp/reset', canTune, async () => {
+		const preview = previewDsp.setSettings(dspChain.getSettings())
+		return { live: dspChain.getSettings(), preview }
 	})
 }

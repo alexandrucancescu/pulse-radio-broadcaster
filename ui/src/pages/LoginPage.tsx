@@ -1,9 +1,11 @@
 import { type FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { setAuth } from '../lib/auth'
+import { useQueryClient } from '@tanstack/react-query'
+import { login } from '../lib/auth'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [user, setUser] = useState('')
   const [pass, setPass] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -15,23 +17,11 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const res = await fetch('/api/config', {
-        headers: { Authorization: `Basic ${btoa(`${user}:${pass}`)}` },
-      })
-
-      if (res.status === 401) {
-        setError('Wrong username or password')
-        return
-      }
-      if (!res.ok) {
-        setError(`Server error (HTTP ${res.status})`)
-        return
-      }
-
-      setAuth(user, pass)
+      const me = await login(user, pass)
+      queryClient.setQueryData(['me'], me)
       navigate('/dashboard', { replace: true })
-    } catch {
-      setError('Could not reach the server')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not reach the server')
     } finally {
       setBusy(false)
     }

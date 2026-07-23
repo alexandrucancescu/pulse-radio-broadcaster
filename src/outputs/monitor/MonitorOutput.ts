@@ -3,11 +3,8 @@ import { ServerResponse } from 'node:http'
 import { Logger } from 'pino'
 import { timingSafeEqual } from 'node:crypto'
 import { createWavStreamHeader } from '../../util/wav.js'
-import {
-	statsAuthConfigured,
-	validateStatsAuth,
-	monitorToken,
-} from '../../util/auth.js'
+import { monitorToken } from '../../util/auth.js'
+import userStore from '../../auth/UserStore.js'
 import type AudioOutput from '../AudioOutput.js'
 import type { OutputTap, AnyFastifyInstance } from '../AudioOutput.js'
 
@@ -63,13 +60,10 @@ export default class MonitorOutput implements AudioOutput {
 	public setSourceActive() {}
 
 	public registerRoutes(app: AnyFastifyInstance) {
-		if (!statsAuthConfigured()) {
-			this.log.warn(
-				'Not initializing /monitor.wav as STATS_USERNAME / STATS_PASSWORD are not set'
-			)
-			return
-		}
-
+		// Three ways in, because audio players can't do cookies:
+		// ?token= (shown in the DSP page, for ffplay/vlc URLs), the panel
+		// session cookie (req.auth, for an in-dashboard player), or Basic
+		// user:pass in the URL checked against the panel users.
 		app.get('/monitor.wav', async (request, reply) => {
 			const token = (request.query as Record<string, string>).token
 
@@ -77,7 +71,7 @@ export default class MonitorOutput implements AudioOutput {
 				if (!isValidToken(token)) {
 					return reply.code(401).send({ error: 'Invalid token' })
 				}
-			} else {
+			} else if (!request.auth) {
 				const auth = request.headers.authorization
 				if (!auth?.startsWith('Basic ')) {
 					reply.header('WWW-Authenticate', 'Basic realm="monitor"')
@@ -87,9 +81,7 @@ export default class MonitorOutput implements AudioOutput {
 				const colon = decoded.indexOf(':')
 				const user = decoded.slice(0, colon)
 				const pass = decoded.slice(colon + 1)
-				try {
-					await validateStatsAuth(user, pass)
-				} catch {
+				if (!userStore.verify(user, pass)) {
 					reply.header('WWW-Authenticate', 'Basic realm="monitor"')
 					return reply.code(401).send({ error: 'Unauthorized' })
 				}

@@ -49,7 +49,6 @@ export default async function (app: FastifyInstance, { outputManager }: Options)
 			'User-agent: *',
 			...streamPaths.map(p => `Disallow: ${p}`),
 			'Disallow: /api/',
-			'Disallow: /stats',
 			'Disallow: /monitor.wav',
 			'Disallow: /listen.m3u',
 			'Disallow: /listen.pls',

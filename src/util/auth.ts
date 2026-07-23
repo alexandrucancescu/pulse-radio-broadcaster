@@ -1,27 +1,15 @@
 import { createHmac } from 'node:crypto'
-import env from '../env.js'
-
-export function statsAuthConfigured(): boolean {
-	return Boolean(env.STATS_USERNAME && env.STATS_PASSWORD)
-}
-
-/** Validate callback for @fastify/basic-auth, shared by all protected routes */
-export async function validateStatsAuth(username: string, password: string) {
-	if (username === env.STATS_USERNAME && password === env.STATS_PASSWORD) {
-		return
-	}
-
-	throw new Error('Unauthorized')
-}
+import { authSecret } from '../auth/secret.js'
 
 /**
- * One-way token derived from the admin password — safe to display in UI
- * because it can't be reversed to recover the password, and the server
- * only accepts it on the monitor endpoint.
+ * Access token for /monitor.wav — audio players can't do cookies, so the
+ * monitor accepts this as a query param. Derived from the per-instance
+ * auth secret: safe to display in the UI (one-way), stable across
+ * restarts, and rotates together with a secret reset.
  */
 export function monitorToken(): string {
-	return createHmac('sha256', 'pulse-monitor')
-		.update(env.STATS_PASSWORD ?? '')
+	return createHmac('sha256', authSecret())
+		.update('pulse-monitor')
 		.digest('hex')
 		.slice(0, 32)
 }
