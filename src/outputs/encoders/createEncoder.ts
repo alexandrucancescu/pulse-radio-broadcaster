@@ -45,7 +45,8 @@ const defaultFormatEncoderOptions: Record<
 export default function createEncoder(
 	inputFormat: InputFormat,
 	outputFormat: OutputFormat,
-	log: Logger
+	log: Logger,
+	desc?: { role: string; label: string }
 ): AudioEncoder {
 	const defaultConfig = defaultFormatEncoderOptions[<AudioFormat>outputFormat.format]
 
@@ -81,6 +82,7 @@ export default function createEncoder(
 			sampleRate: outputFormat.sampleRate,
 			options: outputFormat.options ?? defaultConfig?.options,
 		},
-		log
+		log,
+		desc
 	)
 }

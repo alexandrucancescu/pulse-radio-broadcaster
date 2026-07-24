@@ -4,6 +4,7 @@ import type SourceManager from '../sources/SourceManager.js'
 import { requireAuth } from '../plugins/auth.js'
 import type StreamConnections from '../outputs/StreamConnections.js'
 import { config } from '../config/ConfigStore.js'
+import reaper from '../system/PatientReaper.js'
 
 type Options = {
 	listenerStats: ListenerStats
@@ -43,6 +44,7 @@ export default async function (app: FastifyInstance, { listenerStats, sourceMana
 				? listeners.map(l => ({ ...l, bufferedBytes: connections.bufferedFor(l.id) }))
 				: listeners,
 			uptime: sourceManager.getUptime(),
+			processes: reaper.snapshot(),
 			memory: {
 				main: {
 					rss: m.rss,

@@ -25,3 +25,56 @@
 	transform-origin: bottom;
 	animation: eq-bar 1s ease-in-out infinite;
 }
+
+/* ── Audio monitor: dead skeleton bars + attention/hover sweep ── */
+/* A CSS mask cuts the fill into meter-style segments. The fill is a flat grey
+   when dead, and a moving green→amber→red gradient when it wants attention or
+   on hover — a live preview of what the meter does. */
+.monitor-bars {
+	-webkit-mask-image: repeating-linear-gradient(90deg, #000 0, #000 3px, transparent 3px, transparent 4px);
+	mask-image: repeating-linear-gradient(90deg, #000 0, #000 3px, transparent 3px, transparent 4px);
+	background: #3f3f46;
+	/* Resting bars read as clearly disabled until hinted or hovered. */
+	opacity: 0.35;
+	transition: opacity 0.25s ease;
+}
+
+.monitor-bars.is-live,
+.group:hover .monitor-bars {
+	background: linear-gradient(90deg, #22c55e, #eab308, #ef4444, #22c55e);
+	background-size: 200% 100%;
+	animation: monitor-sweep 2.4s linear infinite;
+	opacity: 0.92;
+}
+
+@keyframes monitor-sweep {
+	from {
+		background-position: 0 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+
+/* Soft brand-red halo that breathes on the enable button while hinting. */
+.monitor-glow {
+	animation: monitor-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes monitor-glow {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 rgba(242, 57, 57, 0);
+	}
+	50% {
+		box-shadow: 0 0 0 4px rgba(242, 57, 57, 0.22);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.monitor-bars.is-live,
+	.group:hover .monitor-bars,
+	.monitor-glow {
+		animation: none;
+	}
+}

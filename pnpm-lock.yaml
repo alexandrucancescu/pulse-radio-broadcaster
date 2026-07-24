@@ -53,6 +53,9 @@ importers:
       jose:
         specifier: ^6.2.4
         version: 6.2.4
+      pidusage:
+        specifier: ^4.0.1
+        version: 4.0.1
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -84,6 +87,9 @@ importers:
       '@types/node':
         specifier: ^20.11.19
         version: 20.11.19
+      '@types/pidusage':
+        specifier: ^2.0.5
+        version: 2.0.5
       '@types/useragent':
         specifier: ^2.3.4
         version: 2.3.4
@@ -937,6 +943,9 @@ packages:
   '@types/node@25.9.5':
     resolution: {integrity: sha512-OScDchr2fwuUmWdf4kZ9h7PcJiYDVInhJizG/biAq3cAvqwYktuy/TYGGdZNMtNTFUP7rnb0NU4TUdm82kt4Rg==}
 
+  '@types/pidusage@2.0.5':
+    resolution: {integrity: sha512-MIiyZI4/MK9UGUXWt0jJcCZhVw7YdhBuTOuqP/BjuLDLZ2PmmViMIQgZiWxtaMicQfAz/kMrZ5T7PKxFSkTeUA==}
+
   '@types/useragent@2.3.4':
     resolution: {integrity: sha512-4pGiUe4NptP06CwsW+pY/3bgGCUdMf8+DrtyJ+jNR1UTPnSEA57TsskdBtE+oq+GpPCXIR+n51RvzKIsyy4rrw==}
 
@@ -1629,6 +1638,10 @@ packages:
   picomatch@4.0.5:
     resolution: {integrity: sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A==}
     engines: {node: '>=12'}
+
+  pidusage@4.0.1:
+    resolution: {integrity: sha512-yCH2dtLHfEBnzlHUJymR/Z1nN2ePG3m392Mv8TFlTP1B0xkpMQNHAnfkY0n2tAi6ceKO6YWhxYfZ96V4vVkh/g==}
+    engines: {node: '>=18'}
 
   pino-abstract-transport@1.1.0:
     resolution: {integrity: sha512-lsleG3/2a/JIWUtf9Q5gUNErBqwIu1tUKTT3dUzaf5DySw9ra1wcqKjJjLX1VTY64Wk1eEOYsVGSaGfCK85ekA==}
@@ -2577,6 +2590,8 @@ snapshots:
     dependencies:
       undici-types: 7.24.6
 
+  '@types/pidusage@2.0.5': {}
+
   '@types/useragent@2.3.4': {}
 
   '@vitest/expect@4.1.10':
@@ -3193,6 +3208,10 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.5: {}
+
+  pidusage@4.0.1:
+    dependencies:
+      safe-buffer: 5.2.1
 
   pino-abstract-transport@1.1.0:
     dependencies:

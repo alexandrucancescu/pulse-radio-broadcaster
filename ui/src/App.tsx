@@ -3,6 +3,7 @@ import StreamsPage from './pages/StreamsPage'
 import LoginPage from './pages/LoginPage'
 import LivePage from './pages/LivePage'
 import HistoryPage from './pages/HistoryPage'
+import SystemPage from './pages/SystemPage'
 import DspPage from './pages/DspPage'
 import AdminLayout from './components/AdminLayout'
 import StationConfigPage from './pages/config/StationConfigPage'
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/dashboard" element={<AdminLayout />}>
           <Route index element={<LivePage />} />
           <Route path="history" element={<HistoryPage />} />
+          <Route path="system" element={<SystemPage />} />
           <Route path="dsp" element={<DspPage />} />
           <Route path="library" element={<LibraryPage />} />
           <Route path="config/station" element={<StationConfigPage />} />

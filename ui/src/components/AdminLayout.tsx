@@ -7,6 +7,7 @@ import { restartFlag } from '../lib/restartFlag'
 import { requestRestart } from '../hooks/useConfig'
 import Footer from './Footer'
 import PulseLogo from './PulseLogo'
+import GlobalMonitorBar from './GlobalMonitorBar'
 
 const NAV = [
   {
@@ -14,6 +15,7 @@ const NAV = [
     items: [
       { to: '/dashboard', label: 'Live', end: true },
       { to: '/dashboard/history', label: 'History' },
+      { to: '/dashboard/system', label: 'System' },
     ],
   },
   {
@@ -195,12 +197,14 @@ export default function AdminLayout() {
           </div>
         )}
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 pb-28">
           <div className="mx-auto max-w-7xl space-y-6">
             <Outlet />
             <Footer />
           </div>
         </main>
+
+        <GlobalMonitorBar />
       </div>
     </div>
   )

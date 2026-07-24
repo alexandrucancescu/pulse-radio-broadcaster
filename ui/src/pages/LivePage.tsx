@@ -1,18 +1,16 @@
-import { useStats } from '../hooks/useStats'
+import { Link } from 'react-router-dom'
+import { useStats, type TrackedProcess } from '../hooks/useStats'
 import { useNowPlaying } from '../hooks/useNowPlaying'
-import { usePreferredStream } from '../hooks/usePreferredStream'
 import ListenerTable from '../components/ListenerTable'
 import RefererBreakdown from '../components/RefererBreakdown'
 import CountryBreakdown from '../components/CountryBreakdown'
 import TopListeners from '../components/TopListeners'
 import UptimePanel from '../components/UptimePanel'
 import NowPlayingBar from '../components/NowPlayingBar'
-import AudioMeter from '../components/AudioMeter'
 
 export default function LivePage() {
   const { data, isLoading, error } = useStats()
   const { data: nowPlaying } = useNowPlaying()
-  const stream = usePreferredStream()
 
   const listeners = data?.listenerCount ?? 0
   const uniqueIps = data?.uniqueIpCount ?? 0
@@ -33,27 +31,14 @@ export default function LivePage() {
         </div>
       )}
 
-      {/* ── Now Playing + Monitor strip ────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {nowPlaying?.current ? (
-          <NowPlayingBar entry={nowPlaying.current} />
-        ) : (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-sm text-zinc-500">
-            Nothing playing
-          </div>
-        )}
-        <Card>
-          <div className="flex items-center gap-2 pb-2">
-            <span className="text-[11px] font-medium tracking-wide text-zinc-500 uppercase">Audio Monitor</span>
-            {stream && <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-mono text-zinc-500">{stream.label}</span>}
-          </div>
-          {stream ? (
-            <AudioMeter src={stream.url} label={stream.label} />
-          ) : (
-            <p className="py-2 text-sm text-zinc-500">No active streams</p>
-          )}
-        </Card>
-      </div>
+      {/* ── Now Playing ────────────────────────────────────── */}
+      {nowPlaying?.current ? (
+        <NowPlayingBar entry={nowPlaying.current} />
+      ) : (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-sm text-zinc-500">
+          Nothing playing
+        </div>
+      )}
 
       {/* ── Stat cards ─────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -71,6 +56,7 @@ export default function LivePage() {
         <Card heading="System">
           {data?.memory ? (
             <div className="space-y-2 text-sm">
+              <ProcessSummary processes={data.processes ?? []} />
               <MemRow label="Process RSS" bytes={data.memory.main.rss} />
               <MemRow label="App heap" bytes={data.memory.main.heapUsed} />
               <MemRow label="Worker heap" bytes={data.memory.worker.heapUsed} />
@@ -172,5 +158,30 @@ function MemRow({ label, bytes }: { label: string; bytes: number }) {
       <span className="text-zinc-500">{label}</span>
       <span className="font-mono text-zinc-300">{Math.round(bytes / 1048576)} MB</span>
     </div>
+  )
+}
+
+function ProcessSummary({ processes }: { processes: TrackedProcess[] }) {
+  const live = processes.filter((p) => p.status !== 'exited')
+  const hanging = live.filter((p) => p.status === 'hanging').length
+  const childRss = live.reduce((sum, p) => sum + (p.rssBytes ?? 0), 0)
+
+  return (
+    <Link
+      to="/dashboard/system"
+      className="-mx-1 flex items-center justify-between rounded-md px-1 py-1 transition hover:bg-zinc-800/50"
+    >
+      <span className="text-zinc-500">ffmpeg</span>
+      <span className="flex items-center gap-2 font-mono text-zinc-300">
+        {hanging > 0 && (
+          <span className="rounded bg-red-950/60 px-1.5 py-0.5 text-xs font-medium text-red-400">
+            {hanging} hanging
+          </span>
+        )}
+        <span>
+          {live.length} · {Math.round(childRss / 1048576)} MB
+        </span>
+      </span>
+    </Link>
   )
 }

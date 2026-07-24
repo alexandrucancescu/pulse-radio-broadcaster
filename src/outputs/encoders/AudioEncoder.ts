@@ -2,6 +2,8 @@ import { PassThrough } from 'stream'
 import Ffmpeg, { FfmpegCommand } from 'fluent-ffmpeg'
 import type { Logger } from 'pino'
 import EventEmitter from 'node:events'
+import type { ChildProcess } from 'node:child_process'
+import reaper from '../../system/PatientReaper.js'
 
 export type InputFormat = {
 	channels?: number
@@ -33,14 +35,22 @@ class AudioEncoder extends EventEmitter {
 
 	private readonly inputFormat: InputFormat
 	private readonly log: Logger
+	private readonly desc?: { role: string; label: string }
+	private reaperId: number | null = null
 
 	public readonly outputFormat: OutputFormat
 
-	constructor(inputFormat: InputFormat, outputFormat: OutputFormat, log: Logger) {
+	constructor(
+		inputFormat: InputFormat,
+		outputFormat: OutputFormat,
+		log: Logger,
+		desc?: { role: string; label: string }
+	) {
 		super()
 		this.log = log
 		this.outputFormat = outputFormat
 		this.inputFormat = inputFormat
+		this.desc = desc
 		this._isRunning = false
 	}
 
@@ -92,7 +102,20 @@ class AudioEncoder extends EventEmitter {
 		this.outputStream.on('data', chunk => this.emit('data', chunk))
 
 		this.ffmpeg = this.createFfmpegCommand()
-			.on('start', cmd => this.log.info(`Encoder start: ${cmd}`))
+			.on('start', cmd => {
+				this.log.info(`Encoder start: ${cmd}`)
+				// ffmpegProc is assigned by the time 'start' fires. Hand the child
+				// to the reaper — its 'exit' event authoritatively marks the death,
+				// including after the auto-restart below spawns a fresh process.
+				const child = (this.ffmpeg as unknown as { ffmpegProc?: ChildProcess }).ffmpegProc
+				if (child) {
+					this.reaperId = reaper.register({
+						role: this.desc?.role ?? 'encoder',
+						label: this.desc?.label ?? this.outputFormat.format,
+						child,
+					})
+				}
+			})
 			.on('error', err => {
 				this.log.error(err, 'FFMPEG encoder error')
 			})
@@ -111,6 +134,11 @@ class AudioEncoder extends EventEmitter {
 	public stop() {
 		//todo make sure ended; add timeout
 		if (!this.isRunning) return
+		// We SIGINT and move on without awaiting exit — so tell the reaper this
+		// one is released. If ffmpeg ignores the signal and lingers, the reaper
+		// surfaces it as 'hanging' instead of it vanishing from view.
+		if (this.reaperId !== null) reaper.release(this.reaperId)
+		this.reaperId = null
 		this.ffmpeg.removeAllListeners()
 		this.ffmpeg.kill('SIGINT')
 		this._isRunning = false

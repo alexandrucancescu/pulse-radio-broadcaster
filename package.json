@@ -1,6 +1,6 @@
 {
   "name": "pulse-radio-broadcaster",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "Online radio broadcasting server that converts RTP PCM data into various formats including AAC, MP3, Opus, and more. It features customisable streaming points, burst buffering for seamless listening, and comprehensive statistics, making it a highly configurable solution.",
   "exports": "./dist/run.js",
   "engines": {
@@ -36,6 +36,7 @@
     "fluent-ffmpeg": "github:alexandrucancescu/node-fluent-ffmpeg",
     "ip": "^2.0.1",
     "jose": "^6.2.4",
+    "pidusage": "^4.0.1",
     "pino": "^10.3.1",
     "pino-pretty": "^10.3.1",
     "png-to-ico": "^3.0.2",
@@ -48,6 +49,7 @@
     "@types/fluent-ffmpeg": "^2.1.24",
     "@types/ip": "^1.1.3",
     "@types/node": "^20.11.19",
+    "@types/pidusage": "^2.0.5",
     "@types/useragent": "^2.3.4",
     "drizzle-kit": "^0.31.10",
     "prettier": "^3.9.5",

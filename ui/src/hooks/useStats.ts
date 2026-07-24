@@ -52,6 +52,23 @@ export type StreamBuffers = {
   percentOfBudget: number | null
 }
 
+export type ProcStatus = 'running' | 'hanging' | 'exited'
+
+// One spawned ffmpeg the Patient Reaper is following (src/system/PatientReaper.ts)
+export type TrackedProcess = {
+  id: number
+  pid: number
+  role: string
+  label: string
+  startedAt: number
+  status: ProcStatus
+  released: boolean
+  exitedAt: number | null
+  exitCode: number | null
+  cpuPct: number | null
+  rssBytes: number | null
+}
+
 export type StatsResponse = {
   streamBuffers: StreamBuffers
   listenerCount: number
@@ -60,6 +77,7 @@ export type StatsResponse = {
   listenersByCountry: Record<string, number>
   listeners: Listener[]
   uptime: Uptime
+  processes: TrackedProcess[]
   memory: {
     main: MemoryUsage
     worker: MemoryUsage
@@ -76,5 +94,8 @@ export function useStats() {
   return useQuery({
     queryKey: ['stats'],
     queryFn: fetchStats,
+    // Live dashboard: refresh often enough that process CPU/RSS and listener
+    // counts stay current (the reaper samples every ~3s server-side).
+    refetchInterval: 5000,
   })
 }

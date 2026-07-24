@@ -67,7 +67,8 @@ class HlsOutput implements AudioOutput {
 				sampleRate: streamConfig.sampleRate,
 				options: streamConfig.options,
 			},
-			log
+			log,
+			{ role: 'hls-encoder', label: this.mount }
 		)
 
 		this.segmenter = new AdtsSegmenter(this.segmentSeconds)

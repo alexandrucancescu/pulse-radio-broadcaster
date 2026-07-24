@@ -1,0 +1,26 @@
+#!/bin/sh
+# Auto-bump the app version and INCLUDE it in this commit (default: minor).
+#
+#   BUMP=patch git commit ...      # 0.1.0 → 0.1.1
+#   BUMP=major git commit ...      # 0.1.0 → 1.0.0
+#
+# Runs in pre-commit (not prepare-commit-msg) so the bumped package.json lands
+# in the SAME commit — the message hooks run too late to change commit content.
+# Skips merges and amends so only genuine new commits climb the version, which
+# keeps fixup/amend workflows from inflating it.
+
+git_dir=$(git rev-parse --git-dir)
+
+# Merge commits: leave the version alone.
+if [ -f "$git_dir/MERGE_HEAD" ]; then
+	exit 0
+fi
+
+# Amends (fixups): detect via the invoking git command line and skip.
+case "$(ps -o args= -p "$PPID" 2>/dev/null)" in
+	*--amend*)
+		exit 0
+		;;
+esac
+
+node scripts/bump-version.mjs

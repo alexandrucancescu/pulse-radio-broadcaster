@@ -5,6 +5,7 @@ import type { Logger } from 'pino'
 import type AudioSource from '../AudioSource.js'
 import type MediaLibrary from './MediaLibrary.js'
 import type { MediaType } from './MediaLibrary.js'
+import reaper from '../../system/PatientReaper.js'
 
 // If this many files fail to decode in a row, the library is junk —
 // declare inactive and let the silence keepalive take over
@@ -40,6 +41,7 @@ class AutoDjSource extends EventEmitter implements AudioSource {
 	private active = false
 	private selected = false
 	private proc: ChildProcess | null = null
+	private reaperId: number | null = null
 	private queue: QueueEntry[] = []
 	private consecutiveFailures = 0
 
@@ -136,6 +138,11 @@ class AutoDjSource extends EventEmitter implements AudioSource {
 			'pipe:1',
 		])
 		this.proc = proc
+		this.reaperId = reaper.register({
+			role: 'autodj-decode',
+			label: basename(file),
+			child: proc,
+		})
 
 		let producedData = false
 
@@ -179,6 +186,8 @@ class AutoDjSource extends EventEmitter implements AudioSource {
 		if (!this.proc) return
 		const proc = this.proc
 		this.proc = null
+		if (this.reaperId !== null) reaper.release(this.reaperId)
+		this.reaperId = null
 		proc.stdout?.removeAllListeners()
 		proc.kill('SIGKILL')
 	}

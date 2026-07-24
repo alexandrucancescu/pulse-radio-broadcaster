@@ -19,6 +19,7 @@ import { flushOpenSessions } from './db/index.js'
 import NowPlayingState from './nowPlaying.js'
 import BrandingManager from './branding/BrandingManager.js'
 import configStore, { config } from './config/ConfigStore.js'
+import reaper from './system/PatientReaper.js'
 import log from './util/log.js'
 
 // Log bootstrap env (minus secrets) and the UI-managed config summary
@@ -103,6 +104,9 @@ const outputManager = new OutputManager({ live: dspChain, preview: previewDsp },
 
 sourceManager.on('active', () => outputManager.setSourceActive(true))
 sourceManager.on('inactive', () => outputManager.setSourceActive(false))
+
+// Follows every spawned ffmpeg for the dashboard; never kills anything
+reaper.start()
 
 outputManager.start()
 dspChain.start()

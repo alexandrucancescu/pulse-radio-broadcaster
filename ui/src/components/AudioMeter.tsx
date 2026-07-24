@@ -4,6 +4,10 @@ type AudioMeterProps = {
   src: string
   label?: string
   className?: string
+  // When idle, draw attention: animated colored bars + a glowing enable button.
+  attention?: boolean
+  // Fires once the user actually starts monitoring (used to stop hinting).
+  onActivate?: () => void
 }
 
 const MIN_DB = -60
@@ -60,7 +64,7 @@ function drawBar(
   }
 }
 
-export default function AudioMeter({ src, label, className = '' }: AudioMeterProps) {
+export default function AudioMeter({ src, label, className = '', attention = false, onActivate }: AudioMeterProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef<{
     audio: HTMLAudioElement
@@ -139,14 +143,26 @@ export default function AudioMeter({ src, label, className = '' }: AudioMeterPro
     audio.addEventListener('error', () => setMode('error'))
     ctx.resume()
     audio.play()
-      .then(() => { setMode('muted'); animate() })
+      .then(() => { setMode('muted'); animate(); onActivate?.() })
       .catch(() => setMode('error'))
-  }, [src, animate])
+  }, [src, animate, onActivate])
 
   useEffect(() => () => {
     cancelAnimationFrame(animRef.current)
     const s = stateRef.current
     if (s) { s.audio.pause(); s.audio.src = ''; s.ctx.close() }
+  }, [])
+
+  // Tear the audio graph down and return to the dead state, re-activatable.
+  const stop = useCallback(() => {
+    cancelAnimationFrame(animRef.current)
+    const s = stateRef.current
+    if (s) { s.audio.pause(); s.audio.src = ''; s.ctx.close() }
+    stateRef.current = null
+    meterL.current = { smooth: MIN_DB, peak: MIN_DB, hold: 0 }
+    meterR.current = { smooth: MIN_DB, peak: MIN_DB, hold: 0 }
+    setPeakMax(MIN_DB)
+    setMode('idle')
   }, [])
 
   const handleClick = useCallback(() => {
@@ -157,45 +173,72 @@ export default function AudioMeter({ src, label, className = '' }: AudioMeterPro
     else { g.gain.value = 0; setMode('muted') }
   }, [mode, activate])
 
-  // Idle / error: the whole area is the start target, with a centered prompt
-  // (no cramped column, uses the empty meter space).
+  // Idle / error: a dead skeleton meter + prompt. The whole row is the start
+  // target. Layout mirrors the active state so enabling causes no shift.
   if (mode === 'idle' || mode === 'error') {
+    const isErr = mode === 'error'
+    const hint = attention && !isErr
     return (
       <button
         onClick={handleClick}
-        className={`group flex w-full items-center justify-center gap-2.5 rounded-lg py-3 text-sm transition-colors ${
-          mode === 'error'
-            ? 'text-red-400/90 hover:text-red-300'
-            : 'text-zinc-400 hover:text-zinc-200'
-        } ${className}`}
+        className={`group flex w-full cursor-pointer items-center gap-3 rounded-lg text-left ${className}`}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-current group-hover:bg-zinc-700 transition-colors">
-          {mode === 'error' ? <IconError /> : <IconPlay />}
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-105 ${
+          isErr
+            ? 'bg-red-950/60 text-red-400'
+            : `text-zinc-500 group-hover:bg-zinc-700 group-hover:text-zinc-100 ${
+                hint ? 'monitor-glow bg-zinc-800 text-zinc-200' : 'bg-zinc-800/40'
+              }`
+        }`}>
+          {isErr ? <IconError /> : <IconPlay />}
         </span>
-        <span>{mode === 'error' ? 'No signal — click to retry' : 'Click to start monitoring'}</span>
+
+        {/* Label sits above the bars so it clearly reads as a call to action. */}
+        <div className="flex flex-1 min-w-0 flex-col justify-center gap-1.5">
+          <span className={`text-sm font-medium transition-colors ${
+            isErr ? 'text-red-400/90' : `group-hover:text-zinc-200 ${hint ? 'text-zinc-200' : 'text-zinc-600'}`
+          }`}>
+            {isErr
+              ? 'No signal — click to retry'
+              : `Click to enable audio monitoring${label ? ` · ${label}` : ''}`}
+          </span>
+          {!isErr && (
+            <div className="flex flex-col gap-1">
+              <SkeletonRow live={hint} />
+              <SkeletonRow live={hint} />
+            </div>
+          )}
+        </div>
       </button>
     )
   }
 
+  const muted = mode === 'muted'
   return (
     <div className={`flex items-center gap-3 ${className}`}>
+      {/* Stage 2: bars are already live; this chip clearly toggles the audio. */}
       <button
         onClick={handleClick}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 transition-colors"
-        title={mode === 'muted' ? 'Unmute' : 'Mute'}
+        className={`flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${
+          muted
+            ? 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
+            : 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'
+        }`}
+        title={muted ? 'Unmute — hear the audio' : 'Mute — keep the bars only'}
       >
-        {mode === 'muted' ? <IconMuted /> : <IconSpeaker />}
+        {muted ? <IconMuted /> : <IconSpeaker />}
+        <span>{muted ? 'Unmute' : 'Mute'}</span>
       </button>
 
       <div className="flex flex-1 min-w-0 items-center gap-2">
-        <div className="flex flex-col gap-1.5 text-[10px] font-semibold leading-none text-zinc-600 select-none">
+        <div className="flex flex-col gap-2 text-[10px] font-semibold leading-none text-zinc-600 select-none">
           <span>L</span><span>R</span>
         </div>
-        <canvas ref={canvasRef} className="flex-1 h-7 rounded" />
+        <canvas ref={canvasRef} className="flex-1 h-11 rounded" />
       </div>
 
       <div className="flex flex-col items-end gap-0.5 shrink-0 w-16">
-        <span className={`text-xs font-mono tabular-nums ${
+        <span className={`text-sm font-mono tabular-nums ${
           peakMax > YELLOW_DB ? 'text-red-400' : peakMax > GREEN_DB ? 'text-amber-400' : 'text-zinc-400'
         }`}>
           {peakMax > MIN_DB ? peakMax.toFixed(1) : '—'}
@@ -203,8 +246,20 @@ export default function AudioMeter({ src, label, className = '' }: AudioMeterPro
         </span>
         {label && <span className="text-[10px] text-zinc-600 truncate max-w-full">{label}</span>}
       </div>
+
+      <button
+        onClick={stop}
+        className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
+        title="Stop monitoring"
+      >
+        <IconPower />
+      </button>
     </div>
   )
+}
+
+function SkeletonRow({ live }: { live: boolean }) {
+  return <div className={`monitor-bars h-3 rounded ${live ? 'is-live' : ''}`} />
 }
 
 function IconPlay() {
@@ -230,6 +285,13 @@ function IconError() {
   return (
     <svg className="h-4 w-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+    </svg>
+  )
+}
+function IconPower() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2v10" /><path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
     </svg>
   )
 }

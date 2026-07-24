@@ -62,7 +62,10 @@ class IcecastOutput implements AudioOutput {
 		this.log = log
 		this.consumers = new Set()
 
-		this.encoder = createEncoder(inputFormat, this.config.encoder, log)
+		this.encoder = createEncoder(inputFormat, this.config.encoder, log, {
+			role: 'icecast-encoder',
+			label: this.config.paths[0],
+		})
 
 		const burstSize = this.config.burstSize ?? this.encoder.bitRateBytes * DEFAULT_BURST_SEC
 

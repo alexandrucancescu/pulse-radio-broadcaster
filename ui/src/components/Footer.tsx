@@ -13,6 +13,7 @@ export default function Footer() {
           <PulseLogo className="h-4 w-4 text-[#f23939]" />
           Powered by Pulse Broadcast
         </a>
+        <span className="ml-1.5 font-mono text-zinc-600">v{__APP_VERSION__}</span>
       </p>
       <p>
         Developed by{' '}
